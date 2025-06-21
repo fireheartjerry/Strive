@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from db import *
+from db import db
 
 app = Flask(__name__)
 
@@ -22,6 +22,13 @@ app.add_url_rule('/echo', 'echo', echo, methods=['POST'])
 @app.route('/glebber', methods=['GET'])
 def glebber():
     return jsonify({'message': 'glebber'})
+
+# Rankings endpoint sorted by elo
+def rankings():
+    rows = db.execute("SELECT id, username, rating AS elo FROM users ORDER BY elo DESC")
+    return jsonify({'rankings': rows})
+
+app.add_url_rule('/rankings', 'rankings', rankings, methods=['GET'])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
