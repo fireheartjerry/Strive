@@ -1,39 +1,68 @@
 import json
 import random
+import string
 from db import db
 
-# populate_db.py: Seed initial data for GymForces hackathon
-# Assumes create_db.py has been run and tables exist.
+# Common first and last names for more realistic usernames
+FIRST_NAMES = [
+    "alex", "sam", "jordan", "taylor", "morgan",
+    "casey", "jamie", "riley", "dakota", "reese",
+    "cameron", "devon", "drew", "kai", "skyler",
+    "peyton", "blake", "rowan", "quinn", "avery"
+]
+
+LAST_NAMES = [
+    "smith", "johnson", "williams", "brown", "jones",
+    "miller", "davis", "garcia", "rodriguez", "wilson",
+    "martinez", "anderson", "taylor", "thomas", "hernandez",
+    "moore", "martin", "jackson", "thompson", "white"
+]
 
 def seed_demo_user():
     rows = db.execute("SELECT id FROM users WHERE username = ?", "demo")
     if rows:
         return rows[0]['id']
-    else:
-        db.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", "demo", "hack", "demo@example.com")
-        rows = db.execute("SELECT id FROM users WHERE username = ?", "demo")
-        return rows[0]['id']
-
+    db.execute(
+        "INSERT INTO users (username, password, email) VALUES (?, ?, ?)",
+        "demo", "hack", "demo@example.com"
+    )
+    rows = db.execute("SELECT id FROM users WHERE username = ?", "demo")
+    return rows[0]['id']
 
 def seed_many_users(n=100):
-    """Seed approximately n dummy users with random XP and ELO."""
-    for i in range(1, n+1):
-        username = f"user{i:03d}"
-        email = f"{username}@example.com"
-        # Check if user exists
-        rows = db.execute("SELECT id FROM users WHERE username = ?", username)
-        if rows:
-            continue
-        # Random XP between 0 and 5000, random elo around 1000±200
-        xp = random.randint(0, 5000)
-        elo = random.randint(800, 1200)
-        # Insert user with dummy password
-        try:
-            db.execute("INSERT INTO users (username, password, email, xp, elo) VALUES (?, ?, ?, ?, ?)",
-                       username, "hack", email, xp, elo)
-        except Exception:
-            pass
+    """Seed approximately n dummy users with realistic usernames, random XP and ELO."""
+    created = 0
+    tried = set()
 
+    while created < n:
+        first = random.choice(FIRST_NAMES)
+        last  = random.choice(LAST_NAMES)
+        base  = f"{first}.{last}"                # e.g. "alex.smith"
+        username = base
+
+        # If that base is already taken (or we've already tried), append digits
+        suffix = 1
+        while username in tried or db.execute("SELECT 1 FROM users WHERE username = ?", username):
+            username = f"{base}{suffix}"
+            suffix += 1
+
+        tried.add(username)
+        email = f"{username}@example.com"
+
+        xp  = random.randint(0, 5000)
+        elo = random.randint(800, 1200)
+        password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+        try:
+            db.execute(
+                "INSERT INTO users (username, password, email, xp, elo) VALUES (?, ?, ?, ?, ?)",
+                username, password, email, xp, elo
+            )
+            created += 1
+        except Exception as e:
+            # if insert fails for any reason, skip and continue
+            print(f"Failed to insert {username}: {e}")
+            continue
 
 def seed_muscle_groups():
     muscle_groups = [
