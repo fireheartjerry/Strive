@@ -1,7 +1,4 @@
-import sqlite3
-
-# Create a database connection
-db = sqlite3.connect("strive.db")
+from db import *
 
 # USERS: extended profile for GymForces
 db.execute("""
@@ -190,7 +187,6 @@ CREATE TABLE IF NOT EXISTS session_exercises (
     requires_equipment BOOLEAN NOT NULL DEFAULT 0,
     submission_limit INTEGER NOT NULL DEFAULT -1,
     media_reference TEXT,
-    FOREIGN KEY (session_id, exercise_id) REFERENCES completed_exercises(session_id, user_id, exercise_id) ON DELETE CASCADE,
     PRIMARY KEY (session_id, exercise_id)
 );
 """)

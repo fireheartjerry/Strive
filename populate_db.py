@@ -1,172 +1,278 @@
-from db import db
+import json
 import random
-from datetime import datetime, timedelta
-import hashlib
+from db import db
 
-# Configuration for dummy data
-NUM_USERS = 20
-NUM_EXERCISES = 10
-NUM_WORKOUTS_PER_USER = 5
-NUM_CONTESTS = 3
+# populate_db.py: Seed initial data for GymForces hackathon
+# Assumes create_db.py has been run and tables exist.
 
-def random_datetime(start_days_ago=365):
-    base = datetime.now() - timedelta(days=start_days_ago)
-    return (base + timedelta(days=random.randint(0, start_days_ago))).strftime('%Y-%m-%d %H:%M:%S')
+def seed_demo_user():
+    rows = db.execute("SELECT id FROM users WHERE username = ?", "demo")
+    if rows:
+        return rows[0]['id']
+    else:
+        db.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", "demo", "hack", "demo@example.com")
+        rows = db.execute("SELECT id FROM users WHERE username = ?", "demo")
+        return rows[0]['id']
 
-def hash_password(password):
-    # simple SHA256 hash for dummy passwords
-    return hashlib.sha256(password.encode()).hexdigest()
 
-if __name__ == '__main__':
-    # Populate trainers
-    trainers = [
-        ('Alice', 'http://example.com/voice/alice.mp3', 'Expert yoga instructor'),
-        ('Bob', 'http://example.com/voice/bob.mp3', 'Strength coach'),
-        ('Charlie', 'http://example.com/voice/charlie.mp3', 'Cardio specialist')
+def seed_many_users(n=100):
+    """Seed approximately n dummy users with random XP and ELO."""
+    for i in range(1, n+1):
+        username = f"user{i:03d}"
+        email = f"{username}@example.com"
+        # Check if user exists
+        rows = db.execute("SELECT id FROM users WHERE username = ?", username)
+        if rows:
+            continue
+        # Random XP between 0 and 5000, random elo around 1000±200
+        xp = random.randint(0, 5000)
+        elo = random.randint(800, 1200)
+        # Insert user with dummy password
+        try:
+            db.execute("INSERT INTO users (username, password, email, xp, elo) VALUES (?, ?, ?, ?, ?)",
+                       username, "hack", email, xp, elo)
+        except Exception:
+            pass
+
+
+def seed_muscle_groups():
+    muscle_groups = [
+        ("Core", "Muscles of the core, including abdominals and lower back."),
+        ("Chest", "Pectoral muscles."),
+        ("Back", "Latissimus dorsi, rhomboids, and other back muscles."),
+        ("Legs", "Quadriceps, hamstrings, calves."),
+        ("Arms", "Biceps, triceps, forearms."),
+        ("Shoulders", "Deltoids and related muscles."),
+        ("Glutes", "Gluteal muscles."),
+        ("Full Body", "Exercises targeting multiple muscle groups.")
     ]
-    trainer_ids = []
-    for name, url, bio in trainers:
-        trainer_ids.append(db.execute(
-            "INSERT INTO trainers (name, voice_url, bio) VALUES (?, ?, ?)",
-            name, url, bio
-        ))
+    for name, desc in muscle_groups:
+        try:
+            db.execute("INSERT INTO muscle_groups (name, description) VALUES (?, ?)", name, desc)
+        except Exception:
+            pass
 
-    # Populate users
-    user_ids = []
-    for i in range(1, NUM_USERS + 1):
-        username = f'user{i}'
-        password = hash_password('password')
-        email = f'user{i}@example.com'
-        join_date = random_datetime()
-        twofa = random.choice([0, 1])
-        workouts_completed = random.randint(0, 20)
-        events_completed = random.randint(0, 10)
-        rating = random.randint(800, 2400)
-        user_ids.append(db.execute(
-            "INSERT INTO users (username, password, email, join_date, twofa, workouts_completed, events_completed, rating) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            username, password, email, join_date, twofa, workouts_completed, events_completed, rating
-        ))
 
-    # Populate exercises
-    # Base exercises list
+def seed_exercises(demo_user_id):
     exercises = [
-        ('Push-up', 'Standard push-up exercise', 'chest, triceps', 'easy', ''),
-        ('Squat', 'Bodyweight squat', 'legs, glutes', 'medium', ''),
-        ('Plank', 'Core stability hold', 'core', 'easy', ''),
-        ('Burpee', 'Full-body cardio', 'full body', 'hard', ''),
-        ('Lunge', 'Alternating lunges', 'legs', 'medium', '')
+        {
+            "id": "plank",
+            "name": "Plank",
+            "description": "Hold a plank position with a straight body.",
+            "difficulty": "beginner",
+            "equipment_required": "none",
+            "media_url": "",
+            "created_by": demo_user_id
+        },
+        {
+            "id": "pushups",
+            "name": "Push-ups",
+            "description": "Standard push-ups with proper form.",
+            "difficulty": "beginner",
+            "equipment_required": "none",
+            "media_url": "",
+            "created_by": demo_user_id
+        },
+        {
+            "id": "squats",
+            "name": "Bodyweight Squats",
+            "description": "Standard bodyweight squats focusing on depth and form.",
+            "difficulty": "beginner",
+            "equipment_required": "none",
+            "media_url": "",
+            "created_by": demo_user_id
+        },
+        {
+            "id": "lunges",
+            "name": "Lunges",
+            "description": "Forward lunges alternating legs.",
+            "difficulty": "beginner",
+            "equipment_required": "none",
+            "media_url": "",
+            "created_by": demo_user_id
+        },
+        {
+            "id": "burpees",
+            "name": "Burpees",
+            "description": "Full-body exercise combining squat, plank, and jump.",
+            "difficulty": "intermediate",
+            "equipment_required": "none",
+            "media_url": "",
+            "created_by": demo_user_id
+        }
     ]
-    # Add generic exercises to reach NUM_EXERCISES
-    for i in range(len(exercises)+1, NUM_EXERCISES+1):
-        exercises.append((
-            f'Exercise {i}',
-            f'Description for exercise {i}',
-            random.choice(['arms', 'legs', 'core', 'full body']),
-            random.choice(['easy', 'medium', 'hard']),
-            ''
-        ))
-    exercise_ids = []
-    for name, desc, muscles, diff, media in exercises:
-        exercise_ids.append(db.execute(
-            "INSERT INTO exercises (name, description, muscle_groups, difficulty, media_url) VALUES (?, ?, ?, ?, ?)",
-            name, desc, muscles, diff, media
-        ))
+    for ex in exercises:
+        try:
+            db.execute(
+                """
+                INSERT INTO exercises (id, name, description, difficulty, equipment_required, media_url, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, ex["id"], ex["name"], ex["description"], ex["difficulty"], ex["equipment_required"], ex["media_url"], ex["created_by"])
+        except Exception:
+            pass
+    
+    mapping = {
+        "plank": ["Core", "Full Body"],
+        "pushups": ["Chest", "Arms", "Shoulders"],
+        "squats": ["Legs", "Glutes"],
+        "lunges": ["Legs", "Glutes"],
+        "burpees": ["Full Body", "Legs", "Arms", "Core"]
+    }
+    for ex_id, mg_names in mapping.items():
+        for mg_name in mg_names:
+            rows = db.execute("SELECT id FROM muscle_groups WHERE name = ?", mg_name)
+            if rows:
+                mg_id = rows[0]["id"]
+                try:
+                    db.execute("INSERT INTO exercise_muscle_groups (exercise_id, muscle_group_id) VALUES (?, ?)", ex_id, mg_id)
+                except Exception:
+                    pass
 
-    # Populate workouts and workout_exercises
-    workout_ids = []
-    for uid in user_ids:
-        for _ in range(NUM_WORKOUTS_PER_USER):
-            duration = random.randint(10, 60)
-            mode = random.choice(['strength', 'cardio', 'mixed'])
-            trainer = random.choice(trainer_ids)
-            feedback = 'Good session'
-            wid = db.execute(
-                "INSERT INTO workouts (user_id, duration, mode, trainer_id, feedback) VALUES (?, ?, ?, ?, ?)",
-                uid, duration, mode, trainer, feedback
-            )
-            workout_ids.append(wid)
-            # link exercises
-            for eid in random.sample(exercise_ids, 3):
+
+def seed_trainers():
+    trainers = [
+        {
+            "name": "Alice Trainer",
+            "bio": "Certified calisthenics coach with 5 years of experience.",
+            "certifications": "CPT,Calisthenics Instructor",
+            "experience_years": 5,
+            "specialization": "calisthenics",
+            "profile_pic": "",
+            "contact_info": "alice@example.com"
+        },
+        {
+            "name": "Bob Coach",
+            "bio": "Fitness enthusiast specializing in full-body workouts.",
+            "certifications": "Fitness Nutrition, Strength Training",
+            "experience_years": 3,
+            "specialization": "full body",
+            "profile_pic": "",
+            "contact_info": "bob@example.com"
+        }
+    ]
+    for tr in trainers:
+        try:
+            db.execute(
+                """
+                INSERT INTO trainers (name, bio, certifications, experience_years, specialization, profile_pic, contact_info)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, tr["name"], tr["bio"], tr["certifications"], tr["experience_years"], tr["specialization"], tr["profile_pic"], tr["contact_info"])
+        except Exception:
+            pass
+
+
+def seed_trainer_availability():
+    trainers = db.execute("SELECT id FROM trainers")
+    for row in trainers:
+        trainer_id = row["id"]
+        for day in range(1, 6):  # Monday=1 .. Friday=5
+            try:
                 db.execute(
-                    "INSERT INTO workout_exercises (workout_id, exercise_id, reps, sets, time_held, rating, notes, result_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    wid, eid, random.randint(5, 15), random.randint(1, 5), random.randint(10, 60), random.randint(1, 5), '', ''
-                )
+                    "INSERT INTO trainer_availability (trainer_id, day_of_week, start_time, end_time) VALUES (?, ?, ?, ?)",
+                    trainer_id, day, "08:00", "17:00")
+            except Exception:
+                pass
 
-    # Populate user-trainers (each user assigned a random trainer)
-    for uid in user_ids:
-        db.execute(
-            "INSERT INTO user_trainers (user_id, trainer_id) VALUES (?, ?)",
-            uid, random.choice(trainer_ids)
-        )
 
-    # Populate leaderboard
-    for idx, uid in enumerate(sorted(user_ids, key=lambda x: random.random()), 1):
-        db.execute(
-            "INSERT INTO leaderboard (user_id, category, score, rank) VALUES (?, ?, ?, ?)",
-            uid, 'global', random.randint(0, 1000), idx
-        )
+def seed_user_trainers(demo_user_id):
+    trainers = db.execute("SELECT id FROM trainers ORDER BY id")
+    if trainers:
+        trainer_id = trainers[0]["id"]
+        try:
+            db.execute("INSERT INTO user_trainers (user_id, trainer_id) VALUES (?, ?)", demo_user_id, trainer_id)
+        except Exception:
+            pass
 
-    # Populate contests and entries
-    contest_ids = []
-    for ci in range(1, NUM_CONTESTS + 1):
-        name = f'Contest {ci}'
-        cid = db.execute(
-            "INSERT INTO contests (name, description, mode, host_user_id, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?)",
-            name, f'{name} description', 'timed', random.choice(user_ids), random_datetime(30), random_datetime(1)
-        )
-        contest_ids.append(cid)
-        for uid in random.sample(user_ids, 3):
+
+def seed_level_thresholds():
+    thresholds = [
+        (1, 0),
+        (2, 100),
+        (3, 250),
+        (4, 500),
+        (5, 1000),
+        (6, 2000),
+        (7, 3500),
+        (8, 5500),
+        (9, 8000),
+        (10, 11000)
+    ]
+    for level, xp_req in thresholds:
+        try:
+            db.execute("INSERT INTO level_thresholds (level, xp_required) VALUES (?, ?)", level, xp_req)
+        except Exception:
+            pass
+
+
+def seed_achievements():
+    achievements = [
+        {"name": "First Workout", "description": "Complete your first workout session.", "icon": "", "xp_reward": 10},
+        {"name": "Ten Workouts", "description": "Complete 10 workout sessions.", "icon": "", "xp_reward": 50},
+        {"name": "First Plank", "description": "Complete your first plank session.", "icon": "", "xp_reward": 5},
+        {"name": "First Pushups", "description": "Complete your first pushup session.", "icon": "", "xp_reward": 5},
+        {"name": "Marathon Reps", "description": "Accumulate 1000 total reps across sessions.", "icon": "", "xp_reward": 100}
+    ]
+    for ach in achievements:
+        try:
             db.execute(
-                "INSERT INTO contest_entries (contest_id, user_id, score) VALUES (?, ?, ?)",
-                cid, uid, random.randint(0, 500)
-            )
+                "INSERT INTO achievements (name, description, icon, xp_reward) VALUES (?, ?, ?, ?)", ach["name"], ach["description"], ach["icon"], ach["xp_reward"])
+        except Exception:
+            pass
 
-    # Populate groups and members
-    group_ids = []
-    for title in ['Team A', 'Team B']:
-        gid = db.execute(
-            "INSERT INTO groups (name, description, created_by) VALUES (?, ?, ?)",
-            title, f'{title} description', random.choice(user_ids)
-        )
-        group_ids.append(gid)
-        # members
-        members = random.sample(user_ids, 3)
-        for m in members:
-            db.execute(
-                "INSERT INTO group_members (group_id, user_id, is_admin) VALUES (?, ?, ?)",
-                gid, m, 1 if m == members[0] else 0
-            )
 
-    # Populate achievements and user_achievements
-    ach_ids = []
-    for aname in ['First Login', '100 Workouts', 'Marathon Runner']:
-        aid = db.execute(
-            "INSERT INTO achievements (name, description, icon) VALUES (?, ?, ?)",
-            aname, f'Achievement for {aname}', ''
-        )
-        ach_ids.append(aid)
-        # unlock for random user
-        db.execute(
-            "INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)",
-            random.choice(user_ids), aid
-        )
+def seed_notifications(demo_user_id):
+    try:
+        content = "Welcome to GymForces! Start your first workout to earn XP and achievements."
+        db.execute("INSERT INTO notifications (user_id, type, content) VALUES (?, ?, ?)",
+                   demo_user_id, "welcome", content)
+    except Exception:
+        pass
 
-    # Populate workout_heatmap
-    for uid in user_ids:
-        for d in range(30):
-            date = (datetime.now() - timedelta(days=d)).strftime('%Y-%m-%d')
-            db.execute(
-                "INSERT INTO workout_heatmap (user_id, date, workout_count) VALUES (?, ?, ?)",
-                uid, date, random.randint(0, 2)
-            )
 
-    # Populate invites for each group
-    for gid in group_ids:
-        for _ in range(2):
-            email = f'invite{random.randint(100,999)}@example.com'
-            status = random.choice(['pending', 'accepted', 'declined'])
-            db.execute(
-                "INSERT INTO invites (group_id, invited_user_email, status) VALUES (?, ?, ?)",
-                gid, email, status
-            )
-    print('Database populated with extended dummy data.')
+def seed_user_settings(demo_user_id):
+    settings = {"theme": "dark", "notifications": True}
+    try:
+        db.execute("INSERT INTO user_settings (user_id, settings_json) VALUES (?, ?)" , demo_user_id, json.dumps(settings))
+    except Exception:
+        pass
+
+
+def seed_workout_list(demo_user_id):
+    try:
+        db.execute("INSERT INTO workout_list (owner_user_id, name, description) VALUES (?, ?, ?)",
+                   demo_user_id, "My Routine", "Demo workout routine with basic exercises.")
+        row = db.execute("SELECT id FROM workout_list WHERE owner_user_id = ? AND name = ?", demo_user_id, "My Routine")
+        list_id = row[0]["id"]
+        exercises = ["plank", "pushups", "squats"]
+        order = 1
+        for ex in exercises:
+            try:
+                db.execute("INSERT INTO workout_in_list (workout_list_id, exercise_id, order_index) VALUES (?, ?, ?)",
+                           list_id, ex, order)
+                order += 1
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def main():
+    # Seed demo user
+    demo_user_id = seed_demo_user()
+    # Seed many dummy users
+    seed_many_users(100)
+    # Other seeds
+    seed_muscle_groups()
+    seed_exercises(demo_user_id)
+    seed_trainers()
+    seed_trainer_availability()
+    seed_user_trainers(demo_user_id)
+    seed_level_thresholds()
+    seed_achievements()
+    seed_notifications(demo_user_id)
+    seed_user_settings(demo_user_id)
+    seed_workout_list(demo_user_id)
+    print("Database population complete.")
+
+if __name__ == "__main__":
+    main()
