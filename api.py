@@ -19,7 +19,7 @@ def echo():
 app.add_url_rule('/echo', 'echo', echo, methods=['POST'])
 
 # New GET endpoint for glebber
-@api.route('/glebber', methods=['GET'])
+@app.route('/glebber', methods=['GET'])
 def glebber():
     return jsonify({'message': 'glebber'})
 

@@ -6,17 +6,16 @@ cursor = conn.cursor()
 
 # USERS
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    email TEXT,
-    xp INTEGER DEFAULT 0,
-    elo INTEGER DEFAULT 1000,
-    level INTEGER DEFAULT 1,
-    bio TEXT,
-    profile_pic TEXT,
-    joined TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE 'users' (
+    'id' integer PRIMARY KEY NOT NULL,
+    'username' varchar(20) NOT NULL UNIQUE,
+    'password' varchar(64) NOT NULL,
+    'email' varchar(128) UNIQUE,
+    'join_date' datetime NOT NULL DEFAULT(0),
+    'twofa' boolean NOT NULL DEFAULT(0),
+    'workouts_completed' integer NOT NULL DEFAULT(0),
+    'events_completed' integer NOT NULL DEFAULT(0),
+    'rating' integer,
 );
 """)
 
