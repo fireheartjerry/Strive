@@ -3,8 +3,8 @@ import time
 from typing import List, Dict, Any
 from dataclasses import dataclass, field
 
-import genai
-from genai import types
+from google import genai
+from google.genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # -------------------- Exceptions --------------------
