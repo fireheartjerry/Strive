@@ -1,34 +1,44 @@
-from flask import Flask, request, jsonify, session
-from flask_session import Session
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from db import db
+import uuid
+from functools import wraps
 
 app = Flask(__name__)
 
-# ─── CONFIG ────────────────────────────────────────────────────────────────
-app.config.update({
-    'SECRET_KEY':              'replace-with-a-secure-random-value',
-    'SESSION_TYPE':            'filesystem',
-    'SESSION_PERMANENT':       True,
-    'SESSION_COOKIE_SAMESITE': 'Lax',      # allow cross-site
-    'SESSION_COOKIE_SECURE':   False,       # set True if using HTTPS in production
-    # 'SESSION_COOKIE_DOMAIN':  'localhost', # optional; only if you need domain-specific cookies
-})
-
-CORS(
-    app,
-    resources={r"/*": {
-        "origins": [
-            "https://project-qijqqts4mdd64pxnl85a.framercanvas.com",
-            "http://localhost:3000"
-        ]
-    }},
-    supports_credentials=True
+# ─── CORS CONFIG ─────────────────────────────────────────────────────────────
+CORS(app,
+    supports_credentials=True,
+    origins=["http://localhost:3000", "https://project-qijqqts4mdd64pxnl85a.framercanvas.com", "https://strivespurhacks.framer.website"],
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "OPTIONS"]
 )
 
-Session(app)
-# ────────────────────────────────────────────────────────────────────────────
+# ─── HELPER: AUTH DECORATOR ──────────────────────────────────────────────────
+def auth_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        # 1) Let CORS preflight through
+        if request.method == "OPTIONS":
+            return jsonify({}), 200
 
+        # 2) Now enforce your Bearer token
+        auth_header = request.headers.get("Authorization", "")
+        token       = auth_header.replace("Bearer ", "", 1)
+        if not token:
+            return jsonify({'error': 'Missing token'}), 401
+
+        user = db.execute(
+          "SELECT * FROM users WHERE session_token = ?", token
+        )
+        if not user:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+
+        g.user = user[0]
+        return f(*args, **kwargs)
+    return wrapper
+
+# ─── AUTH ROUTES ─────────────────────────────────────────────────────────────
 @app.route('/create_user', methods=['POST'])
 def create_user():
     data     = request.get_json() or {}
@@ -44,17 +54,12 @@ def create_user():
             "INSERT INTO users (username, password, email) VALUES (?, ?, ?)",
             username, password, email
         )
-        row = db.execute("SELECT id FROM users WHERE username = ?", username)
-        return jsonify({'user_id': row[0]['id'], 'username': username}), 201
-
+        return jsonify({'success': True}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
 @app.route('/login', methods=['POST'])
 def login():
-    session.clear()
-    session.permanent = True
-
     data     = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
@@ -63,77 +68,63 @@ def login():
         return jsonify({'error': 'Ensure all fields are filled.'}), 400
 
     row = db.execute(
-        "SELECT id, username FROM users WHERE username = ? AND password = ?",
+        "SELECT id FROM users WHERE username = ? AND password = ?",
         username, password
     )
     if not row:
-        return jsonify({'error': 'Invalid credentials.'}), 401
+        return jsonify({'error': 'Invalid credentials'}), 401
 
-    session['user_id']  = row[0]['id']
-    session['username'] = row[0]['username']
-    print(session)
-    return jsonify({'user_id': row[0]['id'], 'username': row[0]['username']})
+    token = str(uuid.uuid4())
+    db.execute("UPDATE users SET session_token = ? WHERE id = ?", token, row[0]['id'])
+    print("→ issued token", token, "for user_id", row[0]["id"])
 
+    return jsonify({'user_id': row[0]['id'], 'token': token, 'username': username})
+
+
+
+# ─── PROTECTED ROUTES ────────────────────────────────────────────────────────
 @app.route('/me', methods=['GET'])
+@auth_required
 def me():
-    print(session)
-    # this will only work if the browser supplies the session cookie
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not authenticated.'}), 401
-
-    user_id = session['user_id']
     row = db.execute(
         "SELECT id, username, email, xp FROM users WHERE id = ?",
-        user_id
+        g.user['id']
     )
     if not row:
-        return jsonify({'error': 'User not found.'}), 404
-
+        return jsonify({'error': 'User not found'}), 404
     return jsonify(row[0])
 
 @app.route('/getplankdata', methods=['GET'])
+@auth_required
 def get_plank_data():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Not authenticated.'}), 401
-
     row = db.execute(
         "SELECT duration FROM plank_times WHERE user_id = ? ORDER BY duration ASC LIMIT 1",
-        user_id
+        g.user['id']
     )
     if not row:
         return jsonify({'error': 'No plank data found.'}), 404
-
-    return jsonify(row)
+    return jsonify(row[0])
 
 @app.route('/getvsitdata', methods=['GET'])
+@auth_required
 def get_vsit_data():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Not authenticated.'}), 401
-
     row = db.execute(
         "SELECT duration FROM vsit_times WHERE user_id = ? ORDER BY duration ASC LIMIT 1",
-        user_id
+        g.user['id']
     )
     if not row:
         return jsonify({'error': 'No vsit data found.'}), 404
-
     return jsonify(row[0])
 
 @app.route('/getpushupdata', methods=['GET'])
+@auth_required
 def get_pushup_data():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Not authenticated.'}), 401
-
     row = db.execute(
         "SELECT reps FROM pushups_reps WHERE user_id = ? ORDER BY reps DESC LIMIT 1",
-        user_id
+        g.user['id']
     )
     if not row:
         return jsonify({'error': 'No pushup data found.'}), 404
-
     return jsonify(row[0])
 
 @app.route('/leaderboard', methods=['GET'])
@@ -160,5 +151,4 @@ def leaderboard():
     })
 
 if __name__ == '__main__':
-    # Make sure to always hit the same host (localhost:5000)
     app.run(host='0.0.0.0', port=5000, debug=True)

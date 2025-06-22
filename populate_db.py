@@ -50,33 +50,17 @@ def seed_many_users(n=100):
             except Exception as e:
                 print(f"Failed to insert {username}: {e}")
                 continue
+    
+    db.execute("INSERT INTO users (username, password, email, xp) VALUES (?, ?, ?, ?)",
+               "admin", "admin", "admin@example.com", 5000)
 
 def seed_training_hub_data():
-    users = db.execute("SELECT id FROM users")
-    if not users:
-        print("No users found to seed data for.")
-        return
-    
-    with tqdm(total=len(users), desc="Seeding training data") as progress_bar:
-        for user in users:
-            user_id = user['id']
-            
-            # Seed plank times
-            for _ in range(random.randint(1, 25)):
-                duration = random.randint(20, 300)
-                db.execute("INSERT INTO plank_times (user_id, duration) VALUES (?, ?)", user_id, duration)
-
-            # Seed vsit times
-            for _ in range(random.randint(1, 25)):
-                duration = random.randint(20, 300)
-                db.execute("INSERT INTO vsit_times (user_id, duration) VALUES (?, ?)", user_id, duration)
-
-            # Seed pushup reps
-            for _ in range(random.randint(1, 25)):
-                reps = random.randint(5, 50)
-                db.execute("INSERT INTO pushup_reps (user_id, reps) VALUES (?, ?)", user_id, reps)
-                
-            progress_bar.update(1)
+    id = db.execute("SELECT id FROM users WHERE username = 'admin'")[0]['id']
+    for i in range(30):
+        db.execute("INSERT INTO plank_times (user_id, duration) VALUES (?, ?)", id, random.randint(200, 300))
+        db.execute("INSERT INTO vsit_times (user_id, duration) VALUES (?, ?)", id, random.randint(200, 300))
+        db.execute("INSERT INTO pushup_reps (user_id, reps) VALUES (?, ?)", id, random.randint(30, 50))
+        
 
 def main():
     seed_many_users(100)  # Adjust the number of users as needed

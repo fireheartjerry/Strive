@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     date_of_birth DATE,
     gender TEXT,
     height_cm REAL,
-    weight_kg REAL
+    weight_kg REAL,
+    session_token VARCHAR(256) UNIQUE
 );
 """)
 
