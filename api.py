@@ -137,7 +137,7 @@ def leaderboard():
 
 @app.route("/club_leaderboards", methods=['GET'])
 def get_club_members():
-    club_id = db.execute("SELECT club_id FROM club_members WHERE user_id = ?", ADMIN_ID)
+    club_id = db.execute("SELECT club_id FROM club_members WHERE user_id = ?", ADMIN_ID)[0]['club_id']
     
     page     = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)

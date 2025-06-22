@@ -77,7 +77,7 @@ def seed_clubs():
 
 def seed_me():
     db.execute("INSERT INTO users (username, password, email, xp) VALUES (?, ?, ?, ?)",
-               "admin", "admin", "admin@example.com", 5000)
+               "admin", "12345678", "admin@example.com", 5000)
     db.execute("INSERT INTO club_members (club_id, user_id) VALUES (?, ?)",
                1, 101)
     for i in range(30):
