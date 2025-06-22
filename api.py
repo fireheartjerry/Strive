@@ -6,7 +6,13 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+app.config['SECRET_KEY']   = 'deadbeef'
+app.config['SESSION_TYPE'] = 'filesystem'
+
+
 Session(app)
+
+
 
 @app.route('/create_user', methods=['POST'])
 def create_user():
