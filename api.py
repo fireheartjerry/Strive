@@ -93,7 +93,7 @@ def get_vsit_data():
 @app.route('/getpushupdata', methods=['GET'])
 def get_pushup_data():
     row = db.execute(
-        "SELECT reps FROM pushups_reps WHERE user_id = ? ORDER BY reps DESC LIMIT 1",
+        "SELECT reps FROM pushup_reps WHERE user_id = ? ORDER BY reps DESC LIMIT 1",
         ADMIN_ID
     )
     if not row:
