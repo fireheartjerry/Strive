@@ -59,7 +59,6 @@ def login():
     return jsonify({'user_id': row[0]['id'], 'token': token, 'username': username})
 
 
-# ─── PROTECTED ROUTES ────────────────────────────────────────────────────────
 @app.route('/me', methods=['GET'])
 def me():
     row = db.execute(
@@ -171,38 +170,44 @@ def get_club_members():
 def generate_plan():
     """
     Protected endpoint that takes a JSON payload:
-      { "prompt": "<user workout context>" }
+      { "type": "plank" | "vsit" | "pushup" }
     and returns:
       { "plan": "<generated workout plan text>" }
     """
-
     data = request.get_json() or {}
     workout_type = data.get('type')
-    
-    workout_data = []
-    if workout_type == "plank":
-        workout_data = db.execute(
-            "SELECT duration FROM plank_times WHERE user_id = ? ORDER BY duration ASC",
+    if workout_type not in ('plank', 'vsit', 'pushup'):
+        return jsonify(error="Invalid or missing workout type"), 400
+
+    # Fetch raw history and compute average
+    if workout_type in ("plank", "vsit"):
+        rows = db.execute(
+            f"SELECT duration FROM {workout_type}_times WHERE user_id = ? ORDER BY duration ASC",
             ADMIN_ID
         )
-    elif workout_type == "vsit":
-        workout_data = db.execute(
-            "SELECT duration FROM vsit_times WHERE user_id = ? ORDER BY duration ASC",
-            ADMIN_ID
-        )
-    else:
-        workout_data = db.execute(
+        history = [r['duration'] for r in rows]
+    else:  # pushup
+        rows = db.execute(
             "SELECT reps FROM pushup_reps WHERE user_id = ? ORDER BY reps DESC",
             ADMIN_ID
         )
-    
-    average_value = 0
-    for row in workout_data:
-        if workout_type == "plank" or workout_type == "vsit":
-            average_value += row['duration']
-        else:
-            average_value += row['reps']
-    average_value /= len(workout_data)
+        history = [r['reps'] for r in rows]
+
+    average = (sum(history) / len(history)) if history else 0.0
+
+    # Call the new helper
+    helper = GeminiHelper()
+    try:
+        result = helper.generate_workout_plan(
+            workout_type=workout_type,
+            history=history,
+            average=average
+        )
+        plan_text = result['plan']
+    except GeminiAPIError as e:
+        return jsonify(error=str(e)), 500
+
+    return jsonify(plan=plan_text)
     
 
 if __name__ == '__main__':

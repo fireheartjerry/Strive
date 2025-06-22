@@ -1,10 +1,10 @@
 import os
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from dataclasses import dataclass, field
 
-from google import genai
-from google.genai import types
+import genai
+from genai import types
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # -------------------- Exceptions --------------------
@@ -41,9 +41,9 @@ def create_client(config: GeminiConfig) -> genai.Client:
         raise GeminiAuthError("No API key provided. Set GENAI_API_KEY or pass api_key.")
     return genai.Client(api_key=config.api_key, timeout=config.timeout)
 
-# -------------------- Prompt Builder --------------------
+# -------------------- Helper Class --------------------
 class GeminiHelper:
-    def __init__(self, config: Optional[GeminiConfig] = None):
+    def __init__(self, config: GeminiConfig = None):
         self.config = config or GeminiConfig()
         self.client = create_client(self.config)
 
@@ -52,20 +52,27 @@ class GeminiHelper:
         workout_type: str,
         history: List[int],
         average: float,
-        fitness_level: str,
-        target_outcome: str,
-        equipment: List[str],
-        time_available: int,
-        injury_flags: List[str],
-        previous_responses: Optional[List[str]] = None,
     ) -> List[types.Content]:
-        # Summarize context
+        # Prepare context summary
         history_str = ", ".join(str(x) for x in history)
-        eq_str = ", ".join(equipment) if equipment else "none"
-        inj_str = ", ".join(injury_flags) if injury_flags else "none"
-        prev_block = ("\n".join(previous_responses[-3:]) if previous_responses else "none")
+        # Classify fitness level by percentiles
+        sorted_hist = sorted(history)
+        if len(sorted_hist) >= 3:
+            p33 = sorted_hist[int(len(sorted_hist) * 0.33)]
+            p66 = sorted_hist[int(len(sorted_hist) * 0.66)]
+        else:
+            p33, p66 = average * 0.8, average * 1.2
+        if average <= p33:
+            fitness_level = 'beginner'
+        elif average <= p66:
+            fitness_level = 'intermediate'
+        else:
+            fitness_level = 'advanced'
 
-        # Map muscles
+        # Detect progression trend
+        trend = 'increasing' if len(history) > 1 and history[-1] > history[0] else 'variable'
+
+        # Map target muscle groups automatically
         muscle_map = {
             'plank': ['core'],
             'vsit': ['core'],
@@ -73,55 +80,33 @@ class GeminiHelper:
         }
         muscles = muscle_map.get(workout_type, ['full-body'])
 
-        # Difficulty scaling
-        level_scale = {'beginner': 0.6, 'intermediate': 0.8, 'advanced': 1.0}
-        scale = level_scale.get(fitness_level.lower(), 0.75)
-        prog_pct = int((scale - 0.5) * 100)
-
-        # Outcome parameters
-        outcome_params = {
-            'hypertrophy': {'reps': '8-12', 'rest': '60-90s'},
-            'endurance': {'reps': '15-20', 'rest': '30-45s'},
-            'recovery': {'reps': '10-15 light', 'rest': '90-120s mobility'},
-        }
-        params = outcome_params.get(target_outcome.lower(), {'reps': '10-15', 'rest': '60s'})
-
-        # Assemble prompt
-        lines = [
-            "You are an elite fitness coach specializing in dynamic, data-driven plans.",
+        # Build dynamic prompt
+        prompt_lines = [
+            "You are an elite fitness coach generating a personalized workout plan.",
             f"Workout Type: {workout_type}",
-            f"History: [{history_str}] (avg {average:.1f} sec/reps)",
-            f"Fitness Level: {fitness_level}",
-            f"Target Outcome: {target_outcome}",
-            "",  # section break
-            "Constraints:",
-            f"- Equipment: {eq_str}",
-            f"- Time Available: {time_available} minutes",
-            f"- Injury Flags: {inj_str}",
-            "",  # section break
-            "Parameters:",
-            f"- Muscle Groups: {', '.join(muscles)}",
-            f"- Difficulty: {int(scale*100)}% effort",
-            f"- Reps/Range: {params['reps']}",
-            f"- Rest Interval: {params['rest']}",
-            f"- Weekly Progression: +{prog_pct}% load",
-            "",  # section break
-            "Structure Outline:",
-            "1) Warm-up: 5-10min dynamic mobilization",
-            "2) Main Sets: list exercises by muscle, sets x reps at % effort, rest intervals",
-            "3) Cool-down: mobility/stretch, 5min",
-            "",  # section break
-            "Incorporate balance across exercise categories, adjust for time, and ensure safety.",
-            f"Continue reasoning across turns; reference prior: {prev_block}",
-            "",  # final instruction
-            "Respond as a coach in conversational tone, detailing each section, and end with a motivational message."
+            f"Performance History: [{history_str}] (average {average:.1f})",  
+            f"Detected Fitness Level: {fitness_level} ({trend} trend)",
+            f"Primary Targets: {', '.join(muscles)}",  
+            "",  
+            "Design a structured plan with:",
+            "1) Warm-up: tailored to prime the primary targets and joint mobility.",
+            "2) Main Session: balanced combination of strength, endurance, and mobility exercises.",
+            "   - Specify sets, reps (or duration), load intensity (% of max), and rest periods.",
+            "   - Progression logic: adjust volume or intensity week-over-week.",
+            "3) Cool-down: mobility and stretching focused on the engaged muscles.",
+            "",  
+            "Constraints & Notes:",
+            "- Optimize for efficiency in a single session.",
+            "- Handle limited or no equipment scenarios with bodyweight alternatives.",
+            "- Ensure safety and accommodate potential joint stress.",
+            "",  
+            "Provide the plan in conversational coach style, explaining your reasoning briefly, and conclude with a motivational message to the user."
         ]
-        prompt_text = "\n".join(lines)
+        prompt_text = "\n".join(prompt_lines)
 
         system_part = types.Part.from_text(
             text=(
-                "You generate expert workout plans with clear rationale. "
-                "Provide detailed guidance and a motivational closing sentence."
+                "Use chain-of-thought reasoning to justify exercise choices, scaling, and rest logic."
             )
         )
         user_part = types.Part.from_text(text=prompt_text)
@@ -141,18 +126,9 @@ class GeminiHelper:
         workout_type: str,
         history: List[int],
         average: float,
-        fitness_level: str,
-        target_outcome: str,
-        equipment: List[str],
-        time_available: int,
-        injury_flags: List[str],
-        previous_responses: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        contents = self.build_workout_prompt(
-            workout_type, history, average,
-            fitness_level, target_outcome, equipment,
-            time_available, injury_flags, previous_responses
-        )
+        # Build prompt with only history & average inputs
+        contents = self.build_workout_prompt(workout_type, history, average)
         start = time.time()
         try:
             chunks = list(self.client.models.generate_content_stream(

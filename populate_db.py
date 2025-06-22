@@ -75,25 +75,21 @@ def seed_clubs():
     for club in CLUBS:
         db.execute("INSERT INTO clubs (name) VALUES (?)", club)
 
-def seed_training_hub_data():
-    id = db.execute("SELECT id FROM users WHERE username = 'admin'")[0]['id']
-    for i in range(30):
-        db.execute("INSERT INTO plank_times (user_id, duration) VALUES (?, ?)", id, random.randint(200, 300))
-        db.execute("INSERT INTO vsit_times (user_id, duration) VALUES (?, ?)", id, random.randint(200, 300))
-        db.execute("INSERT INTO pushup_reps (user_id, reps) VALUES (?, ?)", id, random.randint(30, 50))
-
 def seed_me():
     db.execute("INSERT INTO users (username, password, email, xp) VALUES (?, ?, ?, ?)",
                "admin", "admin", "admin@example.com", 5000)
     db.execute("INSERT INTO club_members (club_id, user_id) VALUES (?, ?)",
                1, 101)
+    for i in range(30):
+        db.execute("INSERT INTO plank_times (user_id, duration) VALUES (?, ?)", 101, random.randint(200, 300))
+        db.execute("INSERT INTO vsit_times (user_id, duration) VALUES (?, ?)", 101, random.randint(200, 300))
+        db.execute("INSERT INTO pushup_reps (user_id, reps) VALUES (?, ?)", 101, random.randint(30, 50))
 
 
 def main():
     seed_clubs()
     seed_many_users(100)  # Adjust the number of users as needed
     seed_me()
-    seed_training_hub_data()
 
 
 if __name__ == "__main__":
