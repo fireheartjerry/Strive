@@ -3,7 +3,7 @@ from flask_cors import CORS
 from db import db
 import uuid
 from functools import wraps
-from gemini_helper import generate_workout_plan, GeminiAPIError
+from gemini_helper import GeminiHelper, GeminiAPIError
 
 app = Flask(__name__)
 
