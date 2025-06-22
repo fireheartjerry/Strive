@@ -3,6 +3,7 @@ from flask_cors import CORS
 from db import db
 import uuid
 from functools import wraps
+from gemini_helper import *
 
 app = Flask(__name__)
 
