@@ -137,9 +137,7 @@ def leaderboard():
 
 @app.route("/club_leaderboards", methods=['GET'])
 def get_club_members():
-    club_id = request.args.get('club_id', type=int)
-    if not club_id:
-        return jsonify({'error': 'Club ID is required'}), 400
+    club_id = db.execute("SELECT club_id FROM club_members WHERE user_id = ?", ADMIN_ID)
     
     page     = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
@@ -165,6 +163,14 @@ def get_club_members():
             'total_pages': total_pages
         }
     })
+    
+@app.route('/clubs', methods=['GET'])
+def get_clubs():
+    """
+    Returns a list of all clubs.
+    """
+    rows = db.execute("SELECT name FROM clubs")
+    return jsonify(clubs=rows)
 
 @app.route('/generate_plan', methods=['GET'])
 def generate_plan():
