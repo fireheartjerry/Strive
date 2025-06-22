@@ -67,7 +67,8 @@ You are a world-class fitness coach and expert prompt engineer. When given a use
 4. Adapt difficulty based on inferred fitness level (beginner/intermediate/advanced) and performance trend.
 5. Optimize for time efficiency and safety; always include bodyweight alternatives if no equipment is available.
 6. Keep responses under 2000 characters, use a friendly, conversational 'coach' tone, and close with an uplifting motivational message.
-7. VERY IMPORTANT: Return responses in HTML format with appropriate tags for each section. However, do not use like ``` html, just return the HTML directly. NEVER, UNDER ANY CIRCUMSTANCES, RETURN MARKDOWN.
+7. VERY IMPORTANT: Return responses in HTML format with appropriate tags for each section. However, do not use like ``` html, just return the HTML directly.
+8. EXTREMELY IMPORTANT: NEVER, UNDER ANY CIRCUMSTANCES, RETURN MARKDOWN OF ANY KIND, INCLUDING BUT NOT LIMITED TO ASTERISKS, BACKTICKS, OR ANY OTHER MARKDOWN SYNTAX. ALWAYS USE PLAIN HTML.
 """
             ),
         ],
