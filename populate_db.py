@@ -92,8 +92,8 @@ def seed_me():
 def main():
     seed_clubs()
     seed_many_users(100)  # Adjust the number of users as needed
-    seed_training_hub_data()
     seed_me()
+    seed_training_hub_data()
 
 
 if __name__ == "__main__":

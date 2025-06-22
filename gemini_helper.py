@@ -1,151 +1,175 @@
-'''
-A helper module to generate workout plans using Google Gemini API,
-complete with history-based prompt construction.
-''' 
-
 import os
-from typing import List
-from google import genai
-from google.genai import types
+import time
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, field
 
+import genai
+from genai import types
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-class GeminiAPIError(Exception):
-    """Raised when the Gemini API call fails or configuration is missing."""
+# -------------------- Exceptions --------------------
+class GeminiError(Exception):
     pass
 
+class GeminiAuthError(GeminiError):
+    pass
 
-def create_client(api_key: str = None) -> genai.Client:
-    """
-    Initialize and return a Gemini API client.
+class GeminiRateLimitError(GeminiError):
+    pass
 
-    Args:
-        api_key: Optional API key. If provided, uses this value; otherwise reads GENAI_API_KEY.
+class GeminiTimeoutError(GeminiError):
+    pass
 
-    Returns:
-        An authenticated genai.Client instance.
+class GeminiAPIError(GeminiError):
+    pass
 
-    Raises:
-        GeminiAPIError: If no API key is available.
-    """
-    key = api_key or os.getenv("GENAI_API_KEY")
-    if not key:
-        raise GeminiAPIError("API key not provided. Set GENAI_API_KEY environment variable.")
-    return genai.Client(api_key=key)
+# -------------------- Configuration --------------------
+@dataclass
+class GeminiConfig:
+    api_key: str = field(default_factory=lambda: os.getenv("GENAI_API_KEY", ""))
+    model: str = "gemini-2.5-flash-lite-preview-06-17"
+    temperature: float = 1.0
+    max_output_tokens: int = 1024
+    max_retries: int = 5
+    initial_backoff: float = 1.0
+    max_backoff: float = 16.0
+    timeout: float = 30.0  # seconds
 
+# -------------------- Client Initialization --------------------
+def create_client(config: GeminiConfig) -> genai.Client:
+    if not config.api_key:
+        raise GeminiAuthError("No API key provided. Set GENAI_API_KEY or pass api_key.")
+    return genai.Client(api_key=config.api_key, timeout=config.timeout)
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+# -------------------- Prompt Builder --------------------
+class GeminiHelper:
+    def __init__(self, config: Optional[GeminiConfig] = None):
+        self.config = config or GeminiConfig()
+        self.client = create_client(self.config)
 
-SYSTEM_INSTRUCTION_PART = types.Part.from_text(
-    text=(
-        "You are a personal coach that generates concise workout plans. "
-        "You will receive a user's exercise history and average performance. "
-        "Begin with a brief summary of their history and average, then "
-        "provide a targeted workout plan including sets, reps, weight, recovery, and tips. "
-        "Keep responses under 2000 characters and end with a motivational message."
-    )
-)
+    def build_workout_prompt(
+        self,
+        workout_type: str,
+        history: List[int],
+        average: float,
+        fitness_level: str,
+        target_outcome: str,
+        equipment: List[str],
+        time_available: int,
+        injury_flags: List[str],
+        previous_responses: Optional[List[str]] = None,
+    ) -> List[types.Content]:
+        # Summarize context
+        history_str = ", ".join(str(x) for x in history)
+        eq_str = ", ".join(equipment) if equipment else "none"
+        inj_str = ", ".join(injury_flags) if injury_flags else "none"
+        prev_block = ("\n".join(previous_responses[-3:]) if previous_responses else "none")
 
+        # Map muscles
+        muscle_map = {
+            'plank': ['core'],
+            'vsit': ['core'],
+            'pushup': ['chest', 'shoulders', 'triceps'],
+        }
+        muscles = muscle_map.get(workout_type, ['full-body'])
 
-def build_workout_prompt(
-    workout_type: str,
-    history: List[int],
-    average: float
-) -> str:
-    """
-    Construct a prompt string containing exercise history and average.
+        # Difficulty scaling
+        level_scale = {'beginner': 0.6, 'intermediate': 0.8, 'advanced': 1.0}
+        scale = level_scale.get(fitness_level.lower(), 0.75)
+        prog_pct = int((scale - 0.5) * 100)
 
-    Args:
-        workout_type: One of 'plank', 'vsit', or 'pushup'.
-        history: List of past durations (seconds) or rep counts.
-        average: The average of the history values.
+        # Outcome parameters
+        outcome_params = {
+            'hypertrophy': {'reps': '8-12', 'rest': '60-90s'},
+            'endurance': {'reps': '15-20', 'rest': '30-45s'},
+            'recovery': {'reps': '10-15 light', 'rest': '90-120s mobility'},
+        }
+        params = outcome_params.get(target_outcome.lower(), {'reps': '10-15', 'rest': '60s'})
 
-    Returns:
-        The formatted prompt string for the Gemini API.
-    """
-    labels = {
-        'plank': 'plank hold times (sec)',
-        'vsit':  'V-sit hold times (sec)',
-        'pushup': 'push-up counts'
-    }
-    label = labels.get(workout_type, 'exercise metrics')
+        # Assemble prompt
+        lines = [
+            "You are an elite fitness coach specializing in dynamic, data-driven plans.",
+            f"Workout Type: {workout_type}",
+            f"History: [{history_str}] (avg {average:.1f} sec/reps)",
+            f"Fitness Level: {fitness_level}",
+            f"Target Outcome: {target_outcome}",
+            "",  # section break
+            "Constraints:",
+            f"- Equipment: {eq_str}",
+            f"- Time Available: {time_available} minutes",
+            f"- Injury Flags: {inj_str}",
+            "",  # section break
+            "Parameters:",
+            f"- Muscle Groups: {', '.join(muscles)}",
+            f"- Difficulty: {int(scale*100)}% effort",
+            f"- Reps/Range: {params['reps']}",
+            f"- Rest Interval: {params['rest']}",
+            f"- Weekly Progression: +{prog_pct}% load",
+            "",  # section break
+            "Structure Outline:",
+            "1) Warm-up: 5-10min dynamic mobilization",
+            "2) Main Sets: list exercises by muscle, sets x reps at % effort, rest intervals",
+            "3) Cool-down: mobility/stretch, 5min",
+            "",  # section break
+            "Incorporate balance across exercise categories, adjust for time, and ensure safety.",
+            f"Continue reasoning across turns; reference prior: {prev_block}",
+            "",  # final instruction
+            "Respond as a coach in conversational tone, detailing each section, and end with a motivational message."
+        ]
+        prompt_text = "\n".join(lines)
 
-    history_str = ', '.join(str(x) for x in history)
-    prompt = (
-        f"User history for {label}: [{history_str}]. "
-        f"Average {label.split(' ')[0]}: {average:.1f}. "
-        "Generate a personalized workout plan based on this data."
-    )
-    return prompt
-
-
-def generate_workout_plan(
-    prompt: str,
-    *,
-    model: str = DEFAULT_MODEL,
-    temperature: float = 1.45,
-    max_output_tokens: int = 5000
-) -> str:
-    """
-    Call the Gemini API to generate a workout plan from the prompt.
-
-    Args:
-        prompt: The user-facing prompt.
-        model: The Gemini model identifier.
-        temperature: Sampling temperature.
-        max_output_tokens: Maximum generated tokens.
-
-    Returns:
-        The generated workout plan text.
-
-    Raises:
-        GeminiAPIError: If the API call fails.
-    """
-    client = create_client()
-    contents = [
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text=prompt)]
+        system_part = types.Part.from_text(
+            text=(
+                "You generate expert workout plans with clear rationale. "
+                "Provide detailed guidance and a motivational closing sentence."
+            )
         )
-    ]
-    config = types.GenerateContentConfig(
-        temperature=temperature,
-        max_output_tokens=max_output_tokens,
-        thinking_config=types.ThinkingConfig(thinking_budget=0),
-        response_mime_type="text/plain",
-        system_instruction=[SYSTEM_INSTRUCTION_PART]
+        user_part = types.Part.from_text(text=prompt_text)
+
+        return [
+            types.Content(role="system", parts=[system_part]),
+            types.Content(role="user", parts=[user_part])
+        ]
+
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, max=16),
+        retry=retry_if_exception_type((GeminiRateLimitError, GeminiTimeoutError, GeminiAPIError)),
     )
-
-    try:
-        chunks = []
-        for chunk in client.models.generate_content_stream(
-            model=model,
-            contents=contents,
-            config=config
-        ):
-            chunks.append(chunk.text)
-        return ''.join(chunks)
-    except Exception as e:
-        raise GeminiAPIError(f"Gemini API error: {e}")
-
-
-def plan_for_data(
-    workout_type: str,
-    history: List[int],
-    average: float
-) -> str:
-    """
-    High-level function: builds prompt and returns workout plan.
-
-    Args:
-        workout_type: 'plank', 'vsit', or 'pushup'.
-        history: Past performance values.
-        average: Average of history.
-
-    Returns:
-        A tailored workout plan string.
-
-    Raises:
-        GeminiAPIError: If prompt build or API call fails.
-    """
-    prompt = build_workout_prompt(workout_type, history, average)
-    return generate_workout_plan(prompt)
+    def generate_workout_plan(
+        self,
+        workout_type: str,
+        history: List[int],
+        average: float,
+        fitness_level: str,
+        target_outcome: str,
+        equipment: List[str],
+        time_available: int,
+        injury_flags: List[str],
+        previous_responses: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        contents = self.build_workout_prompt(
+            workout_type, history, average,
+            fitness_level, target_outcome, equipment,
+            time_available, injury_flags, previous_responses
+        )
+        start = time.time()
+        try:
+            chunks = list(self.client.models.generate_content_stream(
+                model=self.config.model,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    temperature=self.config.temperature,
+                    max_output_tokens=self.config.max_output_tokens,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    response_mime_type="text/plain",
+                ),
+            ))
+        except Exception as e:
+            raise GeminiAPIError(str(e))
+        elapsed = time.time() - start
+        text = ''.join(chunk.text for chunk in chunks)
+        return {
+            'plan': text,
+            'latency_s': round(elapsed, 3)
+        }
