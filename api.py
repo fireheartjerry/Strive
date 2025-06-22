@@ -9,7 +9,12 @@ app = Flask(__name__)
 
 ADMIN_ID = 101
 
-CORS(app)
+CORS(app,
+    supports_credentials=True,
+    origins=["http://localhost:3000", "https://project-qijqqts4mdd64pxnl85a.framercanvas.com", "https://strivespurhacks.framer.website"],
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "OPTIONS"]
+)
 
 # ─── AUTH ROUTES ─────────────────────────────────────────────────────────────
 @app.route('/create_user', methods=['POST'])
