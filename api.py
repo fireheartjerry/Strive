@@ -165,9 +165,14 @@ def get_club_members():
 @app.route('/clubs', methods=['GET'])
 def get_clubs():
     """
-    Returns a list of all clubs.
+    Returns a list of all clubs with member count.
     """
-    rows = db.execute("SELECT name FROM clubs")
+    rows = db.execute("""
+        SELECT c.id, c.name, COUNT(cm.user_id) as member_count 
+        FROM clubs c
+        LEFT JOIN club_members cm ON c.id = cm.club_id
+        GROUP BY c.id, c.name
+    """)
     return jsonify(clubs=rows)
 
 @app.route('/generate_plan', methods=['GET'])
