@@ -19,7 +19,7 @@ db.execute("""
 CREATE TABLE IF NOT EXISTS plank_times (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    duration_seconds INTEGER NOT NULL,
+    duration INTEGER NOT NULL
 );
 """)
 
@@ -27,7 +27,7 @@ db.execute("""
 CREATE TABLE IF NOT EXISTS vsit_times (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    duration_seconds INTEGER NOT NULL,
+    duration INTEGER NOT NULL
 );
 """)
 
@@ -35,14 +35,14 @@ db.execute("""
 CREATE TABLE IF NOT EXISTS pushup_reps (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    reps INTEGER NOT NULL,
+    reps INTEGER NOT NULL
 );
 """)
 
 db.execute("""
 CREATE TABLE IF NOT EXISTS clubs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(256) NOT NULL,
+    name VARCHAR(256) NOT NULL
 );
 """)
 
