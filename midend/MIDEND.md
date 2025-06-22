@@ -1,0 +1,1 @@
+This code is not a direct part of the backend api but is actually the midend and handles all the computer vision and machine learning tasks.

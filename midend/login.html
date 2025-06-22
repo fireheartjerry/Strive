@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+        <title>Login</title>
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap");
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: rgba(255, 255, 255, 0);
+                color: #eee;
+                font-family: "Poppins", sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                padding: 10px;
+            }
+            .container {
+                background: #111;
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+                width: 100%;
+                max-width: 360px;
+                padding: 20px;
+            }
+            .container h2 {
+                text-align: center;
+                color: #e9a03b;
+                margin-bottom: 16px;
+                font-size: 1.8rem;
+                font-weight: 600;
+            }
+            .form-group {
+                position: relative;
+                margin-bottom: 16px;
+            }
+            .form-group input {
+                width: 100%;
+                padding: 10px;
+                background: #222;
+                border: 2px solid #333;
+                border-radius: 6px;
+                font-size: 1rem;
+                color: #eee;
+                transition: border-color 0.3s, background 0.3s;
+            }
+            .form-group input:focus {
+                border-color: #e9a03b;
+                background: #1a1a1a;
+                outline: none;
+            }
+            .form-group label {
+                position: absolute;
+                top: 50%;
+                left: 12px;
+                transform: translateY(-50%);
+                background: #111;
+                padding: 0 4px;
+                color: #888;
+                font-size: 0.85rem;
+                pointer-events: none;
+                transition: top 0.3s, font-size 0.3s, color 0.3s;
+            }
+            .form-group input:focus + label,
+            .form-group input:not(:placeholder-shown) + label {
+                top: -6px;
+                font-size: 0.75rem;
+                color: #e9a03b;
+            }
+            .form-group small.error {
+                display: none;
+                color: #f45;
+                font-size: 0.8rem;
+                margin-top: 4px;
+            }
+            .form-group.show-error small.error {
+                display: block;
+            }
+            button {
+                width: 100%;
+                padding: 12px;
+                background: #e9a03b;
+                border: none;
+                border-radius: 6px;
+                font-size: 1rem;
+                font-weight: 500;
+                color: #111;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+            button:hover {
+                background: #d29337;
+            }
+            .toast {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #e9a03b;
+                color: #111;
+                padding: 20px 16px;
+                border-radius: 6px;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.4s;
+                font-weight: 500;
+            }
+            .toast.show {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <form id="loginForm" novalidate>
+                <div class="form-group" id="group-username">
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder=" "
+                        required
+                        pattern="^[A-Za-z0-9_\-]+$"
+                    />
+
+                    <label for="username">Username</label>
+                    <small class="error"
+                        >Only letters, numbers, "-" or "_" allowed.</small
+                    >
+                </div>
+                <div class="form-group" id="group-password">
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder=" "
+                        required
+                        minlength="8"
+                    />
+                    <label for="password">Password</label>
+                    <small class="error">At least 8 characters.</small>
+                </div>
+                <button type="submit">Log In</button>
+            </form>
+        </div>
+
+        <div id="toast" class="toast">Login successful!</div>
+
+        <script>
+            const form = document.getElementById("loginForm");
+            const username = document.getElementById("username");
+            const password = document.getElementById("password");
+            const toast = document.getElementById("toast");
+
+            // Clear inline validation errors on input
+            [username, password].forEach((input) =>
+                input.addEventListener("input", () => {
+                    document
+                        .getElementById("group-" + input.id)
+                        .classList.remove("show-error");
+                })
+            );
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                let ok = true;
+
+                if (!username.checkValidity()) {
+                    document
+                        .getElementById("group-username")
+                        .classList.add("show-error");
+                    ok = false;
+                }
+                if (!password.checkValidity()) {
+                    document
+                        .getElementById("group-password")
+                        .classList.add("show-error");
+                    ok = false;
+                }
+                if (!ok) return;
+
+                const payload = {
+                    username: username.value,
+                    password: password.value,
+                };
+
+                try {
+                    const res = await fetch("http://localhost:5000/login", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        toast.textContent = data.error || "Login failed";
+                    } else {
+                        toast.textContent = "Login successful!";
+                        form.reset();
+
+                        // 🔑 Store token in memory or optionally localStorage
+                        const token = data.token;
+                        localStorage.setItem("authToken", token);
+                        localStorage.setItem(
+                            "username",
+                            data.username
+                        );
+                        window.parent.postMessage({
+                            type: "login",
+                            token: token,
+                            username: data.username,
+                        }, "*");
+                    }
+                } catch (err) {
+                    toast.textContent = "Network error, please try again";
+                }
+
+                toast.classList.add("show");
+                setTimeout(() => toast.classList.remove("show"), 3000);
+            });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,472 @@
+{
+  "user_id": "subject_1791",
+  "timestamp": "2025-06-21T14:14:05.701Z",
+  "total_reps": 15,
+  "reps": [
+    {
+      "timestamp_start": 1750515202157,
+      "down": {
+        "frame": 1266,
+        "elbow_angle": 69.461725759534,
+        "shoulder_angle": 4.590790369898389,
+        "hip_angle": 169.2217864870921,
+        "trunk_slope": -0.00785829931076321,
+        "chest_y": 267.19439218819855,
+        "hip_y": 268.4687438509302
+      },
+      "timestamp_end": 1750515202805,
+      "up": {
+        "frame": 1305,
+        "elbow_angle": 160.41107081893145,
+        "shoulder_angle": 55.433695300895195,
+        "hip_angle": 174.23171315737224,
+        "trunk_slope": -0.3095886508243786,
+        "chest_y": 189.8368411659632,
+        "hip_y": 231.35709652219518
+      },
+      "range_of_motion": {
+        "elbow_delta": 90.94934505939744,
+        "shoulder_delta": 50.84290493099681,
+        "hip_delta": 5.0099266702801515,
+        "chest_displacement": 77.35755102223536
+      },
+      "duration_sec": 0.648,
+      "valid_rep": true,
+      "rep_number": 1
+    },
+    {
+      "timestamp_start": 1750515203455,
+      "down": {
+        "frame": 1344,
+        "elbow_angle": 69.42643468565052,
+        "shoulder_angle": 7.124449202554444,
+        "hip_angle": 169.66296115394752,
+        "trunk_slope": -0.00970402276831226,
+        "chest_y": 264.89554475485954,
+        "hip_y": 266.49923244961695
+      },
+      "timestamp_end": 1750515204103,
+      "up": {
+        "frame": 1383,
+        "elbow_angle": 153.4409718681766,
+        "shoulder_angle": 49.42165191234703,
+        "hip_angle": 177.62949919470097,
+        "trunk_slope": -0.35335366055010303,
+        "chest_y": 189.77026651707487,
+        "hip_y": 237.6509725078886
+      },
+      "range_of_motion": {
+        "elbow_delta": 84.01453718252608,
+        "shoulder_delta": 42.297202709792586,
+        "hip_delta": 7.9665380407534485,
+        "chest_displacement": 75.12527823778467
+      },
+      "duration_sec": 0.648,
+      "valid_rep": true,
+      "rep_number": 2
+    },
+    {
+      "timestamp_start": 1750515204870,
+      "down": {
+        "frame": 1428,
+        "elbow_angle": 69.53517845560134,
+        "shoulder_angle": 4.916030511982127,
+        "hip_angle": 161.1495580980852,
+        "trunk_slope": 0.07043538856896556,
+        "chest_y": 273.88715782219015,
+        "hip_y": 262.9777245754648
+      },
+      "timestamp_end": 1750515205618,
+      "up": {
+        "frame": 1473,
+        "elbow_angle": 156.21850947543902,
+        "shoulder_angle": 48.40279305142992,
+        "hip_angle": 179.96711299421423,
+        "trunk_slope": -0.3932111676607997,
+        "chest_y": 180.18603673830137,
+        "hip_y": 233.76686944351724
+      },
+      "range_of_motion": {
+        "elbow_delta": 86.68333101983768,
+        "shoulder_delta": 43.48676253944779,
+        "hip_delta": 18.817554896129025,
+        "chest_displacement": 93.70112108388878
+      },
+      "duration_sec": 0.748,
+      "valid_rep": true,
+      "rep_number": 3
+    },
+    {
+      "timestamp_start": 1750515207017,
+      "down": {
+        "frame": 1557,
+        "elbow_angle": 67.92326852743282,
+        "shoulder_angle": 14.114795639405768,
+        "hip_angle": 170.22557349889217,
+        "trunk_slope": 0.0013302821074110153,
+        "chest_y": 279.4553671488011,
+        "hip_y": 279.21880317321336
+      },
+      "timestamp_end": 1750515207705,
+      "up": {
+        "frame": 1598,
+        "elbow_angle": 150.54041458606676,
+        "shoulder_angle": 45.89096007751152,
+        "hip_angle": 179.43192458580066,
+        "trunk_slope": -0.38436915809022704,
+        "chest_y": 184.74175254969327,
+        "hip_y": 236.93924052275057
+      },
+      "range_of_motion": {
+        "elbow_delta": 82.61714605863394,
+        "shoulder_delta": 31.776164438105752,
+        "hip_delta": 9.206351086908484,
+        "chest_displacement": 94.71361459910781
+      },
+      "duration_sec": 0.688,
+      "valid_rep": true,
+      "rep_number": 4
+    },
+    {
+      "timestamp_start": 1750515209784,
+      "down": {
+        "frame": 1722,
+        "elbow_angle": 68.90195716201565,
+        "shoulder_angle": 6.794153080134934,
+        "hip_angle": 167.31901559625496,
+        "trunk_slope": 0.0028294745814303637,
+        "chest_y": 271.6445146504877,
+        "hip_y": 271.194932390218
+      },
+      "timestamp_end": 1750515210552,
+      "up": {
+        "frame": 1767,
+        "elbow_angle": 157.38247732082579,
+        "shoulder_angle": 55.48478452440328,
+        "hip_angle": 174.51084694839057,
+        "trunk_slope": -0.3322820949536024,
+        "chest_y": 189.55136592173383,
+        "hip_y": 231.83689257650508
+      },
+      "range_of_motion": {
+        "elbow_delta": 88.48052015881014,
+        "shoulder_delta": 48.69063144426835,
+        "hip_delta": 7.191831352135608,
+        "chest_displacement": 82.09314872875385
+      },
+      "duration_sec": 0.768,
+      "valid_rep": true,
+      "rep_number": 5
+    },
+    {
+      "timestamp_start": 1750515212704,
+      "down": {
+        "frame": 1896,
+        "elbow_angle": 66.57146190503384,
+        "shoulder_angle": 16.35165999625422,
+        "hip_angle": 170.46351254354843,
+        "trunk_slope": -0.023150432942816646,
+        "chest_y": 271.3934171662209,
+        "hip_y": 275.501877276819
+      },
+      "timestamp_end": 1750515213417,
+      "up": {
+        "frame": 1938,
+        "elbow_angle": 155.63189489679513,
+        "shoulder_angle": 54.72072201195189,
+        "hip_angle": 173.29074729399068,
+        "trunk_slope": -0.29847826162480745,
+        "chest_y": 193.1528794593292,
+        "hip_y": 232.8208845602257
+      },
+      "range_of_motion": {
+        "elbow_delta": 89.06043299176129,
+        "shoulder_delta": 38.36906201569767,
+        "hip_delta": 2.827234750442244,
+        "chest_displacement": 78.2405377068917
+      },
+      "duration_sec": 0.713,
+      "valid_rep": true,
+      "rep_number": 6
+    },
+    {
+      "timestamp_start": 1750515215918,
+      "down": {
+        "frame": 2089,
+        "elbow_angle": 65.6568661703436,
+        "shoulder_angle": 11.137028651455957,
+        "hip_angle": 161.3899720804185,
+        "trunk_slope": 0.060525957372946075,
+        "chest_y": 277.2589421125989,
+        "hip_y": 266.53503393013204
+      },
+      "timestamp_end": 1750515216616,
+      "up": {
+        "frame": 2131,
+        "elbow_angle": 154.35760922340208,
+        "shoulder_angle": 45.684888707352506,
+        "hip_angle": 179.91071811485023,
+        "trunk_slope": -0.3295526313406371,
+        "chest_y": 190.19966859861486,
+        "hip_y": 236.74691308143466
+      },
+      "range_of_motion": {
+        "elbow_delta": 88.70074305305847,
+        "shoulder_delta": 34.54786005589655,
+        "hip_delta": 18.52074603443174,
+        "chest_displacement": 87.05927351398404
+      },
+      "duration_sec": 0.698,
+      "valid_rep": true,
+      "rep_number": 7
+    },
+    {
+      "timestamp_start": 1750515217734,
+      "down": {
+        "frame": 2198,
+        "elbow_angle": 66.61028849085112,
+        "shoulder_angle": 15.88368852755851,
+        "hip_angle": 167.88873521510288,
+        "trunk_slope": 0.05776185424075254,
+        "chest_y": 286.291903247881,
+        "hip_y": 275.7371514337595
+      },
+      "timestamp_end": 1750515218333,
+      "up": {
+        "frame": 2234,
+        "elbow_angle": 151.0852918735331,
+        "shoulder_angle": 43.419985064821674,
+        "hip_angle": 176.2401358488463,
+        "trunk_slope": -0.3861980926555372,
+        "chest_y": 187.6647848240418,
+        "hip_y": 240.33444860120306
+      },
+      "range_of_motion": {
+        "elbow_delta": 84.47500338268198,
+        "shoulder_delta": 27.536296537263162,
+        "hip_delta": 8.351400633743424,
+        "chest_displacement": 98.62711842383922
+      },
+      "duration_sec": 0.599,
+      "valid_rep": true,
+      "rep_number": 8
+    },
+    {
+      "timestamp_start": 1750515219216,
+      "down": {
+        "frame": 2287,
+        "elbow_angle": 69.29589842504777,
+        "shoulder_angle": 12.840374742003764,
+        "hip_angle": 170.99602187942062,
+        "trunk_slope": 0.016780477940433802,
+        "chest_y": 284.2848770993398,
+        "hip_y": 281.2259198290653
+      },
+      "timestamp_end": 1750515220016,
+      "up": {
+        "frame": 2335,
+        "elbow_angle": 154.62353037878205,
+        "shoulder_angle": 47.08456294106639,
+        "hip_angle": 177.9684597215456,
+        "trunk_slope": -0.356357844612192,
+        "chest_y": 186.4509444677294,
+        "hip_y": 234.56030184359355
+      },
+      "range_of_motion": {
+        "elbow_delta": 85.32763195373428,
+        "shoulder_delta": 34.24418819906262,
+        "hip_delta": 6.972437842124975,
+        "chest_displacement": 97.83393263161037
+      },
+      "duration_sec": 0.8,
+      "valid_rep": true,
+      "rep_number": 9
+    },
+    {
+      "timestamp_start": 1750515221082,
+      "down": {
+        "frame": 2399,
+        "elbow_angle": 65.20388595980873,
+        "shoulder_angle": 16.69416353794337,
+        "hip_angle": 168.85210978564893,
+        "trunk_slope": 0.004869317961038402,
+        "chest_y": 284.97409103742257,
+        "hip_y": 284.0916924665544
+      },
+      "timestamp_end": 1750515221597,
+      "up": {
+        "frame": 2430,
+        "elbow_angle": 151.55981934085025,
+        "shoulder_angle": 44.808859367323066,
+        "hip_angle": 179.4734715121031,
+        "trunk_slope": -0.362999178063098,
+        "chest_y": 191.0632980418261,
+        "hip_y": 243.300954607274
+      },
+      "range_of_motion": {
+        "elbow_delta": 86.35593338104152,
+        "shoulder_delta": 28.114695829379695,
+        "hip_delta": 10.621361726454154,
+        "chest_displacement": 93.91079299559647
+      },
+      "duration_sec": 0.515,
+      "valid_rep": true,
+      "rep_number": 10
+    },
+    {
+      "timestamp_start": 1750515222604,
+      "down": {
+        "frame": 2490,
+        "elbow_angle": 67.75182977555535,
+        "shoulder_angle": 10.5195707970348,
+        "hip_angle": 169.4840035283329,
+        "trunk_slope": 0.016112548107483162,
+        "chest_y": 276.54625924329116,
+        "hip_y": 273.68463652107056
+      },
+      "timestamp_end": 1750515223298,
+      "up": {
+        "frame": 2532,
+        "elbow_angle": 162.43681050753867,
+        "shoulder_angle": 56.69844815418224,
+        "hip_angle": 172.2641795892615,
+        "trunk_slope": -0.3060517567306801,
+        "chest_y": 188.31330404211513,
+        "hip_y": 230.8728302410119
+      },
+      "range_of_motion": {
+        "elbow_delta": 94.68498073198332,
+        "shoulder_delta": 46.178877357147435,
+        "hip_delta": 2.7801760609285964,
+        "chest_displacement": 88.23295520117603
+      },
+      "duration_sec": 0.694,
+      "valid_rep": true,
+      "rep_number": 11
+    },
+    {
+      "timestamp_start": 1750515224846,
+      "down": {
+        "frame": 2624,
+        "elbow_angle": 67.12764165017863,
+        "shoulder_angle": 19.772796681223276,
+        "hip_angle": 169.57635506327856,
+        "trunk_slope": -0.017449704259602166,
+        "chest_y": 280.47367559212626,
+        "hip_y": 283.60136427735335
+      },
+      "timestamp_end": 1750515225478,
+      "up": {
+        "frame": 2662,
+        "elbow_angle": 159.32122866861786,
+        "shoulder_angle": 52.74062400875934,
+        "hip_angle": 179.4538801141759,
+        "trunk_slope": -0.37556585480393084,
+        "chest_y": 183.58231241503597,
+        "hip_y": 232.2278828087399
+      },
+      "range_of_motion": {
+        "elbow_delta": 92.19358701843923,
+        "shoulder_delta": 32.967827327536064,
+        "hip_delta": 9.877525050897333,
+        "chest_displacement": 96.89136317709028
+      },
+      "duration_sec": 0.632,
+      "valid_rep": true,
+      "rep_number": 12
+    },
+    {
+      "timestamp_start": 1750515226366,
+      "down": {
+        "frame": 2715,
+        "elbow_angle": 64.46009454550837,
+        "shoulder_angle": 10.969471739323287,
+        "hip_angle": 161.49710896895678,
+        "trunk_slope": 0.0492777360567868,
+        "chest_y": 279.22207906001444,
+        "hip_y": 270.5979460267183
+      },
+      "timestamp_end": 1750515227045,
+      "up": {
+        "frame": 2756,
+        "elbow_angle": 150.075039094414,
+        "shoulder_angle": 46.903333360996115,
+        "hip_angle": 175.9502029469145,
+        "trunk_slope": -0.30362902544125503,
+        "chest_y": 199.54150522763646,
+        "hip_y": 240.46297481735675
+      },
+      "range_of_motion": {
+        "elbow_delta": 85.61494454890563,
+        "shoulder_delta": 35.933861621672825,
+        "hip_delta": 14.453093977957707,
+        "chest_displacement": 79.68057383237797
+      },
+      "duration_sec": 0.679,
+      "valid_rep": true,
+      "rep_number": 13
+    },
+    {
+      "timestamp_start": 1750515232026,
+      "down": {
+        "frame": 3054,
+        "elbow_angle": 68.51826393510017,
+        "shoulder_angle": 13.713186600201295,
+        "hip_angle": 177.678598770284,
+        "trunk_slope": -0.02937354169605195,
+        "chest_y": 277.2314963156563,
+        "hip_y": 282.48615589196686
+      },
+      "timestamp_end": 1750515232547,
+      "up": {
+        "frame": 3085,
+        "elbow_angle": 162.58064436803735,
+        "shoulder_angle": 51.91031106210058,
+        "hip_angle": 178.8920780662521,
+        "trunk_slope": -0.35629620377180093,
+        "chest_y": 186.66531578032252,
+        "hip_y": 235.90797061710913
+      },
+      "range_of_motion": {
+        "elbow_delta": 94.06238043293719,
+        "shoulder_delta": 38.197124461899286,
+        "hip_delta": 1.2134792959681135,
+        "chest_displacement": 90.56618053533376
+      },
+      "duration_sec": 0.521,
+      "valid_rep": true,
+      "rep_number": 14
+    },
+    {
+      "timestamp_start": 1750515239978,
+      "down": {
+        "frame": 3528,
+        "elbow_angle": 65.10090529480846,
+        "shoulder_angle": 11.90088525156499,
+        "hip_angle": 163.3870695628662,
+        "trunk_slope": 0.04018210281639275,
+        "chest_y": 276.45597983467457,
+        "hip_y": 269.1520271932496
+      },
+      "timestamp_end": 1750515240710,
+      "up": {
+        "frame": 3572,
+        "elbow_angle": 165.6940462934692,
+        "shoulder_angle": 61.47746005912992,
+        "hip_angle": 169.1028529987671,
+        "trunk_slope": -0.2892020448030051,
+        "chest_y": 189.25242307389362,
+        "hip_y": 227.2656764429025
+      },
+      "range_of_motion": {
+        "elbow_delta": 100.59314099866074,
+        "shoulder_delta": 49.576574807564924,
+        "hip_delta": 5.715783435900903,
+        "chest_displacement": 87.20355676078094
+      },
+      "duration_sec": 0.732,
+      "valid_rep": true,
+      "rep_number": 15
+    }
+  ]
+}

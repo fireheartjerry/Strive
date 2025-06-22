@@ -1,0 +1,10 @@
+{
+  "pushup": {
+    "elbow_down_threshold": 69.967758323723,
+    "elbow_up_threshold": 150.075039094414,
+    "elbow_delta_min": 80.66014036997588,
+    "elbow_delta_max": 110.19810063336888,
+    "chest_disp_min": 64.20857532559592,
+    "chest_disp_max": 98.62711842383922
+  }
+}

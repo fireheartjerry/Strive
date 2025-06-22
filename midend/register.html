@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Register</title>
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap");
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: rgba(255, 255, 255, 0);
+                color: #eee;
+                font-family: "Poppins", sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                padding: 5px;
+            }
+            .container {
+                background: #111;
+                border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+                width: 100%;
+                max-width: 400px;
+                padding: 20px 15px;
+            }
+            .container h2 {
+                text-align: center;
+                margin-bottom: 10px;
+                font-weight: 600;
+                color: #e9a03b;
+                font-size: 2rem;
+            }
+            .form-group {
+                position: relative;
+                margin-bottom: 15px;
+            }
+            .form-group input {
+                width: 100%;
+                padding: 14px 16px 14px 16px;
+                background: #222;
+                border: 2px solid #333;
+                border-radius: 6px;
+                font-size: 1rem;
+                color: #eee;
+                transition: border-color 0.3s, background 0.3s;
+            }
+            .form-group input:focus {
+                border-color: #e9a03b;
+                background: #1a1a1a;
+                outline: none;
+            }
+            .form-group label {
+                position: absolute;
+                top: 50%;
+                left: 16px;
+                transform: translateY(-50%);
+                background: #111;
+                padding: 0 4px;
+                color: #888;
+                font-size: 0.9rem;
+                pointer-events: none;
+                transition: top 0.3s, font-size 0.3s, color 0.3s;
+            }
+            .form-group input:not(:placeholder-shown) + label,
+            .form-group input:focus + label {
+                top: -8px;
+                font-size: 0.75rem;
+                color: #e9a03b;
+            }
+            .form-group small.error {
+                color: #f45;
+                font-size: 0.8rem;
+                margin-top: 4px;
+                display: none;
+            }
+            .form-group.show-error small.error {
+                display: block;
+            }
+            button {
+                width: 100%;
+                padding: 14px;
+                background: #e9a03b;
+                border: none;
+                border-radius: 6px;
+                font-size: 1rem;
+                font-weight: 500;
+                color: #111;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+            button:hover {
+                background: #d29337;
+            }
+            .info-text {
+                font-size: 0.85rem;
+                color: #aaa;
+                line-height: 1.4;
+                margin-top: 25px;
+            }
+            .toast {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #e9a03b;
+                color: #111;
+                padding: 12px 20px;
+                border-radius: 6px;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.4s;
+                font-weight: 500;
+            }
+            .toast.show {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <form id="regForm" novalidate>
+                <div class="form-group" id="group-username">
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder=" "
+                        required
+                        pattern="^[A-Za-z0-9_-]+$"
+                    />
+                    <label for="username">Username</label>
+                    <small class="error"
+                        >Username must be alphanumeric, dashes or underscores
+                        only.</small
+                    >
+                </div>
+                <div class="form-group" id="group-email">
+                    <input type="email" id="email" placeholder=" " required />
+                    <label for="email">Email</label>
+                    <small class="error">Please enter a valid email.</small>
+                </div>
+                <div class="form-group" id="group-password">
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder=" "
+                        required
+                        minlength="8"
+                    />
+                    <label for="password">Password</label>
+                    <small class="error"
+                        >Password must be at least 8 characters.</small
+                    >
+                </div>
+                <div class="form-group" id="group-confirm">
+                    <input
+                        type="password"
+                        id="confirm"
+                        placeholder=" "
+                        required
+                    />
+                    <label for="confirm">Confirmation</label>
+                    <small class="error">Passwords do not match.</small>
+                </div>
+                <button type="submit" onclick="submitForm(event)">Register</button>
+
+            </form>
+
+            <p class="info-text">
+                Your username can only contain alphanumeric characters, dashes,
+                and underscores. Your password must be at least 8 characters
+                long. Your email will be formatted so that it is entirely
+                lowercase.
+            </p>
+        </div>
+
+        <div id="toast" class="toast">Registration successful!</div>
+
+        <script>
+            const form = document.getElementById("regForm");
+            const username = document.getElementById("username");
+            const email = document.getElementById("email");
+            const password = document.getElementById("password");
+            const confirmPw = document.getElementById("confirm");
+            const toast = document.getElementById("toast");
+
+            // lowercase email on blur
+            email.addEventListener("blur", () => {
+                email.value = email.value.trim().toLowerCase();
+            });
+
+            // clear error on input
+            [username, email, password, confirmPw].forEach((input) =>
+                input.addEventListener("input", () => {
+                    document
+                        .getElementById("group-" + input.id)
+                        .classList.remove("show-error");
+                })
+            );
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                let valid = true;
+
+                // client-side validation
+                if (!username.checkValidity()) {
+                    document
+                        .getElementById("group-username")
+                        .classList.add("show-error");
+                    valid = false;
+                }
+                if (!email.checkValidity()) {
+                    document
+                        .getElementById("group-email")
+                        .classList.add("show-error");
+                    valid = false;
+                }
+                if (!password.checkValidity()) {
+                    document
+                        .getElementById("group-password")
+                        .classList.add("show-error");
+                    valid = false;
+                }
+                if (confirmPw.value !== password.value || !confirmPw.value) {
+                    document
+                        .getElementById("group-confirm")
+                        .classList.add("show-error");
+                    valid = false;
+                }
+                if (!valid) return;
+
+                // prepare payload
+                const payload = {
+                    username: username.value,
+                    email: email.value,
+                    password: password.value,
+                };
+
+                try {
+                    const res = await fetch(
+                        "http://localhost:5000/create_user",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload),
+                        }
+                    );
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        // server-side error
+                        toast.textContent = data.error || "Registration failed";
+                    } else {
+                        // success
+                        toast.textContent = "Registration successful!";
+                        form.reset();
+                    }
+                } catch (err) {
+                    toast.textContent = "Network error, please try again";
+                }
+
+                // show toast
+                toast.classList.add("show");
+                setTimeout(() => toast.classList.remove("show"), 500);
+            });
+
+            function submitForm(event) {
+            }
+        </script>
+    </body>
+</html>

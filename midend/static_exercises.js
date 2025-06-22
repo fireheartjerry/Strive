@@ -1,0 +1,727 @@
+let detector;
+let video;
+let poses = [];
+
+// Detection mode: "plank" or "vsit"
+let detectionMode = "plank";
+let timerRunning = false;
+let timerStart = 0;
+let lastTime = 0;
+let statusMessage = "Ready to start";
+let showingCountdown = false;
+let countdownStartTime = 0;
+
+let xp_gained = 0;
+let lastXpMillis = 0;
+
+const COUNTDOWN_MS = 3000;
+const HKA_SLOPE_THRESHOLD = 0.07; // Minimum slope for hip-ankle line in V-sit
+
+// Benchmark values for plank and v-sit
+const BENCHMARKS = {
+    plank: {
+        ear_neck_hip: { min: 150, max: 180 },
+        hip_ankle_slope: { min: 0, max: 0.23 },
+        global_angle: { min: 160, max: 180 },
+        arm_angle: { min: 50, max: 90 },
+        knee_ankle_slope: { min: -0.1, max: Infinity },
+    },
+    vsit: {
+        ear_neck_hip: { min: 110, max: 180 },
+        neck_hip_knee: { min: 40, max: 160 },
+        hip_knee_ankle: { min: 150, max: 200 },
+        hip_ankle_slope: {
+            min: HKA_SLOPE_THRESHOLD,
+            max: Infinity,
+        }, // enforce legs lifted
+    },
+};
+
+// Color variables
+let goodColor, accentColor;
+// Minimum confidence score for keypoints
+const MIN_SCORE = 0.5;
+// Minimum leg-off-ground angle for V-sit
+const LEG_OFF_MIN = 10;
+
+function preload() {
+    font = loadFont(
+        "https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceSansPro-Regular.otf"
+    );
+}
+
+function setup() {
+    // Initialize colors
+    goodColor = color(74, 222, 128); // green
+    accentColor = color(247, 113, 113); // red
+
+    // App container
+    const appContainer = createDiv()
+        .id("appContainer")
+        .style("width", "100%")
+        .style("height", "100vh")
+        .style("display", "flex")
+        .style("justify-content", "center")
+        .style("align-items", "center");
+
+    // Canvas container
+    const canvasContainer = createDiv()
+        .id("canvasContainer")
+        .parent(appContainer)
+        .style("position", "relative")
+        .style("width", "100%")
+        .style("max-width", "640px") // optional cap
+        .style("aspect-ratio", "4/3") // keeps it 640×480 shape
+        .style("overflow", "hidden")
+        .style(
+            "box-shadow",
+            "0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -2px rgba(0,0,0,0.05)"
+        );
+
+    const cw = canvasContainer.elt.clientWidth;
+    const ch = canvasContainer.elt.clientHeight;
+
+    const canvas = createCanvas(cw, ch).parent(canvasContainer);
+    video = createCapture(VIDEO, () => console.log("Video ready"));
+    video.size(cw, ch);
+    video.hide();
+
+    // Status panel
+    statusPanel = createDiv("")
+        .id("statusPanel")
+        .parent(canvasContainer)
+        .style("position", "absolute")
+        .style("top", "2%")
+        .style("left", "2%")
+        .style(
+            "background",
+            "linear-gradient(to right,rgba(30,41,59,0.7),rgba(15,23,42,0.7))"
+        )
+        .style("padding", "8px 15px")
+        .style("color", "white")
+        .style("font-family", "Arial,sans-serif")
+        .style("font-size", "14px")
+        .style("font-weight", "bold")
+        .style("box-shadow", "0 2px 10px rgba(0,0,0,0.2)")
+        .style("backdrop-filter", "blur(5px)");
+
+    // Exercise buttons container
+    const btnContainer = createDiv()
+        .parent(canvasContainer)
+        .style("position", "absolute")
+        .style("bottom", "5%")
+        .style("left", "50%")
+        .style("transform", "translateX(-50%)")
+        .style("display", "flex")
+        .style("gap", "15px");
+
+    // Plank button
+    const plankBtn = createButton("START PLANK")
+        .id("startPlankBtn")
+        .parent(btnContainer)
+        .style("padding", "10px 20px")
+        .style("background", "linear-gradient(45deg, #ff9c00, #ff7b00)")
+        .style("color", "#fff")
+        .style("font-weight", "bold")
+        .style("border", "none")
+        .style("cursor", "pointer")
+        .style("transition", "all 0.3s ease")
+        .style("font-family", "Arial,sans-serif")
+        .style("box-shadow", "0 4px 6px rgba(0,0,0,0.1)")
+        .style("min-width", "140px")
+        .style("text-align", "center")
+        .mouseOver(() => {
+            plankBtn.style("transform", "scale(1.05)");
+            plankBtn.style("box-shadow", "0 6px 8px rgba(0,0,0,0.2)");
+        })
+        .mouseOut(() => {
+            plankBtn.style("transform", "scale(1)");
+            plankBtn.style("box-shadow", "0 4px 6px rgba(0,0,0,0.1)");
+        })
+        .mousePressed(() => startSession("plank"));
+
+    // V-Sit button
+    const vsitBtn = createButton("START V-SIT")
+        .id("startVsitBtn")
+        .parent(btnContainer)
+        .style("padding", "10px 20px")
+        .style("background", "linear-gradient(45deg, #64748b, #475569)")
+        .style("color", "#fff")
+        .style("font-weight", "bold")
+        .style("border", "none")
+        .style("cursor", "pointer")
+        .style("transition", "all 0.3s ease")
+        .style("font-family", "Arial,sans-serif")
+        .style("box-shadow", "0 4px 6px rgba(0,0,0,0.1)")
+        .style("min-width", "140px")
+        .style("text-align", "center")
+        .mouseOver(() => {
+            vsitBtn.style("transform", "scale(1.05)");
+            vsitBtn.style("box-shadow", "0 6px 8px rgba(0,0,0,0.2)");
+        })
+        .mouseOut(() => {
+            vsitBtn.style("transform", "scale(1)");
+            vsitBtn.style("box-shadow", "0 4px 6px rgba(0,0,0,0.1)");
+        })
+        .mousePressed(() => startSession("vsit"));
+
+    // Load TensorFlow and MoveNet
+    tf.setBackend("webgl")
+        .then(() => tf.ready())
+        .then(() => {
+            poseDetection
+                .createDetector(poseDetection.SupportedModels.MoveNet, {
+                    modelType:
+                        poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                })
+                .then((d) => {
+                    detector = d;
+                    statusMessage = "Ready to start";
+                })
+                .catch((err) => {
+                    statusMessage = "Error loading pose detection";
+                    console.error(err);
+                });
+        });
+
+    noStroke();
+    textFont("Arial");
+}
+
+function draw() {
+    background(0);
+    image(video, 0, 0);
+    if (!detector) {
+        drawLoadingIndicator();
+    } else {
+        detectPose();
+        if (poses.length) drawSkeleton();
+    }
+
+    if (showingCountdown) {
+        drawCountdown();
+    } else {
+        drawUI();
+    }
+}
+
+function drawLoadingIndicator() {
+    fill(0, 0, 0, 150);
+    rect(0, 0, width, height);
+    push();
+    translate(width / 2, height / 2);
+    noFill();
+    strokeWeight(5);
+    stroke(67, 97, 238, 150);
+    ellipse(0, 0, 60, 60);
+    stroke(67, 97, 238);
+    arc(0, 0, 60, 60, millis() * 0.005, millis() * 0.005 + PI);
+    pop();
+    fill(255);
+    textSize(16);
+    textAlign(CENTER, CENTER);
+    text("Loading pose detection...", width / 2, height / 2 + 50);
+}
+
+async function detectPose() {
+    if (!video.elt || video.elt.readyState < 2 || !detector) return;
+    try {
+        const results = await detector.estimatePoses(video.elt);
+        poses = results;
+    } catch (err) {
+        poses = [];
+        console.error(err);
+    }
+}
+
+function drawSkeleton() {
+    if (!poses.length) return;
+    const kp = poses[0].keypoints;
+    if (kp.length < 17) return;
+
+    // Define body connections for skeleton
+    const connections = [
+        [3, 4], // ears
+        [3, 5],
+        [4, 6], // ears to shoulders
+        [5, 6], // shoulders
+        [5, 7],
+        [6, 8], // arms
+        [7, 9],
+        [8, 10], // forearms
+        [5, 11],
+        [6, 12], // torso
+        [11, 12], // hips
+        [11, 13],
+        [12, 14], // thighs
+        [13, 15],
+        [14, 16], // calves
+    ];
+
+    drawingContext.save();
+
+    // Add glow effect to the skeleton
+    drawingContext.shadowOffsetX = 0;
+    drawingContext.shadowOffsetY = 0;
+    drawingContext.shadowBlur = 10;
+    drawingContext.shadowColor = "rgba(67, 97, 238, 0.7)";
+
+    // Draw connections with gradient effect
+    for (const [i1, i2] of connections) {
+        const p1 = kp[i1];
+        const p2 = kp[i2];
+
+        if (p1.score > MIN_SCORE && p2.score > MIN_SCORE) {
+            // Create gradient for lines
+            const grad = drawingContext.createLinearGradient(
+                p1.x,
+                p1.y,
+                p2.x,
+                p2.y
+            );
+            grad.addColorStop(0, "rgba(67, 97, 238, 0.8)"); // Blue
+            grad.addColorStop(1, "rgba(114, 9, 183, 0.8)"); // Purple
+
+            // Draw line with gradient
+            drawingContext.beginPath();
+            drawingContext.lineWidth = 3;
+            drawingContext.strokeStyle = grad;
+            drawingContext.moveTo(p1.x, p1.y);
+            drawingContext.lineTo(p2.x, p2.y);
+            drawingContext.stroke();
+        }
+    }
+
+    // Draw joints
+    kp.forEach((pt, i) => {
+        if (pt.score > MIN_SCORE) {
+            // Different sizes for different joint types
+            let radius = 4;
+            // Make important joints (shoulders, hips, knees) larger
+            if ([5, 6, 7, 8, 11, 12, 13, 14].includes(i)) {
+                radius = 6;
+            }
+
+            // Create radial gradient for joints
+            const jointGradient = drawingContext.createRadialGradient(
+                pt.x,
+                pt.y,
+                0,
+                pt.x,
+                pt.y,
+                radius * 2
+            );
+            jointGradient.addColorStop(0, "rgba(114, 9, 183, 1)"); // Center: purple
+            jointGradient.addColorStop(1, "rgba(67, 97, 238, 0.5)"); // Edge: blue
+
+            drawingContext.fillStyle = jointGradient;
+            drawingContext.beginPath();
+            drawingContext.arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
+            drawingContext.fill();
+        }
+    });
+
+    drawingContext.restore();
+
+    // Highlight important joints for the specific exercise
+    if (timerRunning) {
+        const highlightJoint =
+            detectionMode === "plank"
+                ? choose(kp[11], kp[12]) // hip for plank
+                : choose(kp[15], kp[16]); // ankle for v-sit
+
+        if (highlightJoint.score > MIN_SCORE) {
+            noFill();
+            stroke(255, 255, 0, 150 + 100 * sin(millis() * 0.01));
+            strokeWeight(2);
+            circle(highlightJoint.x, highlightJoint.y, 20);
+        }
+
+        const valid =
+            detectionMode === "plank" ? isPlank(poses[0]) : isVsit(poses[0]);
+
+        if (valid) {
+            // if we've been in good form for ≥2 s, give XP
+            if (millis() - lastXpMillis >= 2000) {
+                xp_gained++;
+                lastXpMillis = millis();
+            }
+        } else {
+            // reset the “good-form timer” whenever form breaks
+            lastXpMillis = millis();
+        }
+    }
+}
+
+function updateStatusPanel() {
+    const m = poses.length ? measureMetrics(poses[0]) : {};
+    const lines = [];
+    let allValid = true;
+
+    const keys =
+        detectionMode === "plank"
+            ? Object.keys(BENCHMARKS.plank)
+            : Object.keys(BENCHMARKS.vsit);
+
+    keys.forEach((key) => {
+        const val = m[key] || 0;
+        const bm = BENCHMARKS[detectionMode][key];
+        const valid = val >= bm.min && val <= bm.max;
+        if (!valid) allValid = false;
+        const display = key.includes("slope") ? val.toFixed(3) : val.toFixed(1);
+
+        lines.push(
+            `<div style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+                <span>${formatLabel(key)}:</span>
+                <span style="color: ${
+                    valid ? "#4ade80" : "#f87171"
+                }; font-weight: bold;">${display}°</span>
+            </div>`
+        );
+    });
+
+    statusPanel.html(
+        `<div style="font-size: 14px;">
+            <div style="font-weight: bold; text-align: center; margin-bottom: 8px; color: ${
+                allValid ? "#4ade80" : "#f87171"
+            }">
+                ${detectionMode.toUpperCase()} FORM: ${
+            allValid ? "GOOD" : "NEEDS WORK"
+        }
+            </div>
+            ${lines.join("")}
+        </div>`
+    );
+
+    // Highlight the canvas border when form is good
+    if (timerRunning) {
+        select("canvas").style(
+            "border",
+            allValid ? "3px solid #4ade80" : "3px solid #f87171"
+        );
+    }
+}
+
+function drawUI() {
+    // Draw status panel
+    updateStatusPanel();
+
+    // Create status info container at the bottom
+    drawingContext.save();
+    const infoGradient = drawingContext.createLinearGradient(
+        0,
+        height - 80,
+        0,
+        height
+    );
+    infoGradient.addColorStop(0, "rgba(0,0,0,0)");
+    infoGradient.addColorStop(0.3, "rgba(0,0,0,0.7)");
+    infoGradient.addColorStop(1, "rgba(0,0,0,0.9)");
+    drawingContext.fillStyle = infoGradient;
+    rect(0, height - 80, width, 80);
+    drawingContext.restore();
+
+    textAlign(CENTER, CENTER);
+
+    if (!detector) {
+        fill(255, 200, 50);
+        textSize(20);
+        text("Loading pose detection model...", width / 2, height - 30);
+        return;
+    }
+
+    if (poses.length === 0 && timerRunning) {
+        fill(255, 100, 100);
+        textSize(20);
+        text("No person detected!", width / 2, height - 30);
+    }
+
+    if (timerRunning) {
+        const t = ((millis() - timerStart) / 1000).toFixed(2);
+        const ok = poses.length
+            ? detectionMode === "plank"
+                ? isPlank(poses[0])
+                : isVsit(poses[0])
+            : false;
+
+        // Position constants for top right corner with padding
+        const timerX = width - 120; // Moved further from edge
+        const timerY = 50; // Added padding from top
+        const statusY = timerY + 35; // Increased spacing between timer and status
+
+        // Draw timer with glow effect
+        drawingContext.save();
+        drawingContext.shadowColor = ok
+            ? "rgba(74, 222, 128, 0.8)"
+            : "rgba(247, 113, 113, 0.8)";
+        drawingContext.shadowBlur = 10;
+        drawingContext.shadowOffsetX = 0;
+        drawingContext.shadowOffsetY = 0;
+
+        // Timer background - wider with more padding
+        noStroke();
+        fill(0, 0, 0, 120);
+        rect(timerX - 110, timerY - 40, 220, 95, 10);
+
+        // Timer text
+        fill(255);
+        textSize(48);
+        textStyle(BOLD);
+        textAlign(CENTER, CENTER);
+        text(`${t}s`, timerX, timerY);
+        drawingContext.restore();
+
+        // Status message - centered with timer
+        fill(ok ? goodColor : accentColor);
+        textSize(18);
+        textAlign(CENTER, CENTER);
+        text(statusMessage, timerX, statusY);
+    } else if (lastTime > 0) {
+        // Result display with enhanced styling
+        drawingContext.save();
+        drawingContext.shadowColor = "rgba(67, 97, 238, 0.7)";
+        drawingContext.shadowBlur = 10;
+
+        fill(255);
+        textSize(24);
+        textStyle(BOLD);
+        text(`${detectionMode.toUpperCase()} HELD`, width / 2, height - 60);
+
+        textSize(40);
+        textStyle(BOLD);
+        fill("#4361ee");
+        text(`${lastTime.toFixed(1)}s`, width / 2, height - 25);
+        drawingContext.restore();
+    } else {
+        // Ready state
+        fill(255);
+        textSize(20);
+        text(statusMessage, width / 2, height - 30);
+    }
+
+    // If not in timer mode, show prompt
+    if (!timerRunning && !showingCountdown && lastTime === 0) {
+        drawStartPrompt();
+    }
+}
+
+function drawCountdown() {
+    const elapsed = millis() - countdownStartTime;
+    const progress = constrain(elapsed / COUNTDOWN_MS, 0, 1);
+    const eased = easeOutQuad(progress);
+    const r = 200;
+    noFill();
+    stroke(lerpColor(color(0, 255, 0), color(255, 0, 0), progress));
+    strokeWeight(8);
+    arc(width / 2, height / 2, r, r, -HALF_PI, -HALF_PI + eased * TWO_PI);
+    noStroke();
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(64);
+    text(ceil((1 - progress) * (COUNTDOWN_MS / 1000)), width / 2, height / 2);
+    if (progress >= 1) {
+        showingCountdown = false;
+        timerRunning = true;
+        timerStart = millis();
+        statusMessage = `Measuring ${detectionMode}...`;
+    }
+}
+
+function startSession(mode) {
+    // Prevent starting if already in countdown
+    if (showingCountdown) return;
+
+    detectionMode = mode;
+
+    // If timer is already running, stop it (complete the session)
+    if (timerRunning) {
+        timerRunning = false;
+        lastTime = (millis() - timerStart) / 1000;
+        statusMessage = `${mode.toUpperCase()} completed!`;
+
+        // Update button appearance
+        const btn =
+            mode === "plank"
+                ? select("#startPlankBtn")
+                : select("#startVsitBtn");
+        if (btn) {
+            btn.html(`START ${mode.toUpperCase()}`);
+            const gradient =
+                mode === "plank"
+                    ? "linear-gradient(45deg, #4361ee, #3a0ca3)"
+                    : "linear-gradient(45deg, #8e44ad, #9b59b6)";
+            btn.style("background", gradient);
+        }
+
+        showNotification(
+            `${mode.toUpperCase()} Complete!`,
+            `You held for ${lastTime.toFixed(1)} seconds`
+        );
+        return;
+    }
+
+    // Start countdown
+    showingCountdown = true;
+    countdownStartTime = millis();
+    statusMessage = `Starting ${mode.toUpperCase()}...`;
+
+    // Update button appearance
+    const btn =
+        mode === "plank" ? select("#startPlankBtn") : select("#startVsitBtn");
+    if (btn) {
+        btn.html(`STOP ${mode.toUpperCase()}`);
+        btn.style("background", "linear-gradient(45deg, #ef476f, #d90429)");
+    }
+}
+
+function isPlank(p) {
+    const m = measureMetrics(p);
+    return Object.keys(BENCHMARKS.plank).every(
+        (key) =>
+            m[key] >= BENCHMARKS.plank[key].min &&
+            m[key] <= BENCHMARKS.plank[key].max
+    );
+}
+
+function isVsit(p) {
+    const m = measureMetrics(p);
+    const angleOK = Object.keys(BENCHMARKS.vsit).every(
+        (key) =>
+            m[key] >= BENCHMARKS.vsit[key].min &&
+            m[key] <= BENCHMARKS.vsit[key].max
+    );
+    const legOff = Math.abs(computeLegGroundAngle(p)) >= LEG_OFF_MIN;
+    // New slope constraint
+    const slopeOK = Math.abs(m.hip_ankle_slope) >= HKA_SLOPE_THRESHOLD;
+    return angleOK && legOff && slopeOK;
+}
+
+function measureMetrics(p) {
+    const kp = p.keypoints;
+    const ear = choose(kp[3], kp[4]);
+    const ls = kp[5],
+        rs = kp[6];
+    const neck = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
+    const hip = choose(kp[11], kp[12]);
+    const knee = choose(kp[13], kp[14]);
+    const ank = choose(kp[15], kp[16]);
+    const el = choose(kp[7], kp[8]);
+    const sh = el === kp[7] ? kp[5] : kp[6];
+    const wr = el === kp[7] ? kp[9] : kp[10];
+    return {
+        ear_neck_hip: angleBetween(ear, neck, hip),
+        hip_ankle_slope: abs((ank.y - hip.y) / (ank.x - hip.x)),
+        global_angle: angleBetween(ank, hip, neck),
+        arm_angle: angleBetween(sh, el, wr),
+        neck_hip_knee: angleBetween(neck, hip, knee),
+        hip_knee_ankle: angleBetween(hip, knee, ank),
+        knee_ankle_slope: -(ank.y - knee.y) / (ank.x - knee.x),
+    };
+}
+
+function computeLegGroundAngle(p) {
+    const hip = choose(p.keypoints[11], p.keypoints[12]);
+    const ank = choose(p.keypoints[15], p.keypoints[16]);
+    const ref = { x: hip.x + 1, y: hip.y };
+    return angleBetween(ank, hip, ref);
+}
+
+function angleBetween(a, b, c) {
+    if (!a || !b || !c) return 0;
+    const v1 = createVector(a.x - b.x, a.y - b.y);
+    const v2 = createVector(c.x - b.x, c.y - b.y);
+    const m = v1.mag() * v2.mag();
+    if (m === 0) return 0;
+    return degrees(acos(constrain(v1.dot(v2) / m, -1, 1)));
+}
+
+function choose(a, b) {
+    if (!a || !b) return a || b || { x: 0, y: 0, score: 0 };
+    return a.score > b.score ? a : b;
+}
+
+function formatLabel(key) {
+    return key
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+}
+
+function easeOutQuad(t) {
+    return t * (2 - t);
+}
+
+// Add new UI functions
+function drawStartPrompt() {
+    // Semi-transparent overlay
+    fill(0, 0, 0, 150);
+    rect(0, 0, width, height);
+
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    fill(255);
+    text("Get in position and", width / 2, height / 2 - 30);
+    text("select an exercise", width / 2, height / 2 + 10);
+}
+
+function showNotification(title, message) {
+    // Create notification container
+    const notification = createDiv();
+    notification.style("position", "absolute");
+    notification.style("top", "60px");
+    notification.style("left", "50%");
+    notification.style("transform", "translateX(-50%)");
+    notification.style(
+        "background",
+        "linear-gradient(45deg, #4361ee, #3a0ca3)"
+    );
+    notification.style("color", "white");
+    notification.style("padding", "10px 20px");
+    notification.style("font-family", "Arial, sans-serif");
+    notification.style("box-shadow", "0 4px 12px rgba(0, 0, 0, 0.15)");
+    notification.style("z-index", "1000");
+    notification.style("text-align", "center");
+    notification.parent(select("#canvasContainer"));
+
+    // Add title and message
+    const notifTitle = createElement("h3", title);
+    notifTitle.parent(notification);
+    notifTitle.style("margin", "0 0 5px 0");
+    notifTitle.style("font-size", "16px");
+
+    const notifMsg = createElement("p", message);
+    notifMsg.parent(notification);
+    notifMsg.style("margin", "0");
+    notifMsg.style("font-size", "14px");
+
+    // Fade out and remove after delay
+    setTimeout(() => {
+        let opacity = 1;
+        const fadeInterval = setInterval(() => {
+            opacity -= 0.05;
+            const valid =
+                detectionMode === "plank"
+                    ? isPlank(poses[0])
+                    : isVsit(poses[0]);
+
+            if (valid) {
+                // if we've been in good form for ≥2 s, give XP
+                if (millis() - lastXpMillis >= 2000) {
+                    xp_gained++;
+                    lastXpMillis = millis();
+                }
+            } else {
+                // reset the “good-form timer” whenever form breaks
+                lastXpMillis = millis();
+            }
+            notification.style("opacity", opacity);
+            if (opacity <= 0) {
+                clearInterval(fadeInterval);
+                notification.remove();
+            }
+        }, 20);
+    }, 2000);
+}
+setInterval(function () {
+    window.parent.postMessage({ type: "xpUpdate", message: xp_gained });
+}, 100);
