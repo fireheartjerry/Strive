@@ -81,7 +81,6 @@ def login():
     return jsonify({'user_id': row[0]['id'], 'token': token, 'username': username})
 
 
-
 # ─── PROTECTED ROUTES ────────────────────────────────────────────────────────
 @app.route('/me', methods=['GET'])
 @auth_required
@@ -90,6 +89,7 @@ def me():
         "SELECT id, username, email, xp FROM users WHERE id = ?",
         g.user['id']
     )
+    
     if not row:
         return jsonify({'error': 'User not found'}), 404
     return jsonify(row[0])
@@ -127,6 +127,19 @@ def get_pushup_data():
         return jsonify({'error': 'No pushup data found.'}), 404
     return jsonify(row[0])
 
+@app.route('/my_club', methods=['GET'])
+@auth_required
+def my_club():
+    club = db.execute(
+        "SELECT c.id, c.name FROM clubs c JOIN club_members cm ON c.id = cm.club_id WHERE cm.user_id = ?",
+        g.user['id']
+    )
+    
+    if not club:
+        return jsonify({'error': 'No club found for this user'}), 404
+    
+    return jsonify(club[0])
+
 @app.route('/leaderboard', methods=['GET'])
 def leaderboard():
     page     = request.args.get('page', 1, type=int)
@@ -141,7 +154,7 @@ def leaderboard():
     total_pages = (total + per_page - 1) // per_page
 
     return jsonify({
-        'leaderboard': rows,
+        'lb': rows,
         'pagination': {
             'page': page,
             'per_page': per_page,
@@ -149,6 +162,39 @@ def leaderboard():
             'total_pages': total_pages
         }
     })
+
+@app.route("/club_leaderboards", methods=['GET'])
+def get_club_members():
+    club_id = request.args.get('club_id', type=int)
+    if not club_id:
+        return jsonify({'error': 'Club ID is required'}), 400
+    
+    page     = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    offset   = (page - 1) * per_page
+
+    rows = db.execute(
+        "SELECT u.id, u.username, u.xp FROM club_members cm JOIN users u ON cm.user_id = u.id WHERE cm.club_id = ? ORDER BY u.xp DESC LIMIT ? OFFSET ?",
+        club_id, per_page, offset
+    )
+    
+    total = db.execute("SELECT COUNT(*) as count FROM club_members WHERE club_id = ?", club_id)[0]['count']
+    total_pages = (total + per_page - 1) // per_page
+    
+    if not rows:
+        return jsonify({'error': 'No members found for this club'}), 404
+    
+    return jsonify({
+        'lb': rows,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'total_pages': total_pages
+        }
+    })
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -17,6 +17,19 @@ LAST_NAMES = [
     "moore", "martin", "jackson", "thompson", "white"
 ]
 
+CLUBS = [
+    "Fitness Fanatics", "Health Warriors", "Active Achievers",
+    "Elite Performance Center", "Strength & Conditioning Institute", 
+    "Precision Fitness Academy", "Summit Athletics Club",
+    "Optimal Health Solutions", "Premier Wellness Collective",
+    "Everest Performance Labs", "Velocity Training Systems",
+    "CoreFit Professional", "Pinnacle Athletic Club",
+    "Revolution Fitness Studio", "Elevate Health & Performance",
+    "Dynamic Fitness Professionals", "Apex Training Center",
+    "Momentum Health Group", "Ascend Wellness Institute",
+    "Catalyst Athletics Club", "Integrated Fitness Solutions"
+]
+
 def seed_many_users(n=100):
     """Seed approximately n dummy users with realistic usernames, random XP and ELO."""
     created = 0
@@ -50,9 +63,17 @@ def seed_many_users(n=100):
             except Exception as e:
                 print(f"Failed to insert {username}: {e}")
                 continue
+            
+            # random club
+            club_id = random.randint(1, len(CLUBS))
+            db.execute(
+                "INSERT INTO club_members (club_id, user_id) VALUES (?, ?)",
+                club_id, db.execute("SELECT id FROM users WHERE username = ?", username)[0]['id']
+            )
     
-    db.execute("INSERT INTO users (username, password, email, xp) VALUES (?, ?, ?, ?)",
-               "admin", "admin", "admin@example.com", 5000)
+def seed_clubs():
+    for club in CLUBS:
+        db.execute("INSERT INTO clubs (name) VALUES (?)", club)
 
 def seed_training_hub_data():
     id = db.execute("SELECT id FROM users WHERE username = 'admin'")[0]['id']
@@ -60,11 +81,19 @@ def seed_training_hub_data():
         db.execute("INSERT INTO plank_times (user_id, duration) VALUES (?, ?)", id, random.randint(200, 300))
         db.execute("INSERT INTO vsit_times (user_id, duration) VALUES (?, ?)", id, random.randint(200, 300))
         db.execute("INSERT INTO pushup_reps (user_id, reps) VALUES (?, ?)", id, random.randint(30, 50))
-        
+
+def seed_me():
+    db.execute("INSERT INTO users (username, password, email, xp) VALUES (?, ?, ?, ?)",
+               "admin", "admin", "admin@example.com", 5000)
+    db.execute("INSERT INTO club_members (club_id, user_id) VALUES (?, ?)",
+               1, 101)
+
 
 def main():
+    seed_clubs()
     seed_many_users(100)  # Adjust the number of users as needed
     seed_training_hub_data()
+    seed_me()
 
 
 if __name__ == "__main__":
