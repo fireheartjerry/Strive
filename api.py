@@ -3,7 +3,7 @@ from flask_cors import CORS
 from db import db
 import uuid
 from functools import wraps
-from gemini_helper import GeminiHelper, GeminiAPIError
+from gemini_helper import generate_workout_plan
 
 app = Flask(__name__)
 
@@ -174,8 +174,7 @@ def generate_plan():
     and returns:
       { "plan": "<generated workout plan text>" }
     """
-    data = request.get_json() or {}
-    workout_type = data.get('type')
+    workout_type = request.args.get('type')
     if workout_type not in ('plank', 'vsit', 'pushup'):
         return jsonify(error="Invalid or missing workout type"), 400
 
@@ -195,19 +194,12 @@ def generate_plan():
 
     average = (sum(history) / len(history)) if history else 0.0
 
-    # Call the new helper
-    helper = GeminiHelper()
     try:
-        result = helper.generate_workout_plan(
-            workout_type=workout_type,
-            history=history,
-            average=average
-        )
-        plan_text = result['plan']
+        plan = generate_workout_plan(workout_type, history, average)
     except GeminiAPIError as e:
         return jsonify(error=str(e)), 500
 
-    return jsonify(plan=plan_text)
+    return jsonify(plan=plan)
     
 
 if __name__ == '__main__':
