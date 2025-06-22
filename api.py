@@ -194,7 +194,27 @@ def get_club_members():
         }
     })
 
+@app.route('/generate_plan', methods=['POST'])
+@auth_required
+def generate_plan():
+    """
+    Protected endpoint that takes a JSON payload:
+      { "prompt": "<user workout context>" }
+    and returns:
+      { "plan": "<generated workout plan text>" }
+    """
+    data = request.get_json() or {}
+    prompt = data.get('prompt')
+    if not prompt:
+        return jsonify({'error': 'Missing prompt'}), 400
 
+    try:
+        plan = generate_workout_plan(prompt)
+        return jsonify({'plan': plan}), 200
+
+    except GeminiAPIError as e:
+        # Something went wrong calling Gemini
+        return jsonify({'error': str(e)}), 502
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
