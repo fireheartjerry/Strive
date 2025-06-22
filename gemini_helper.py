@@ -63,7 +63,7 @@ def generate_workout_plan(
     Generates a workout plan from the given prompt using the Gemini API.
 
     Args:
-        prompt: The user’s current progress and goals description.
+        prompt: The user's current progress and goals description.
         model: Gemini model to use.
         temperature: Sampling temperature for response variability.
         max_output_tokens: Maximum tokens to generate.
