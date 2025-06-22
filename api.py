@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from db import db
 import uuid
-from functools import wraps
 from gemini_helper import generate_workout_plan
 
 app = Flask(__name__)
@@ -16,7 +15,6 @@ CORS(app,
     methods=["GET", "POST", "OPTIONS"]
 )
 
-# ─── AUTH ROUTES ─────────────────────────────────────────────────────────────
 @app.route('/create_user', methods=['POST'])
 def create_user():
     data     = request.get_json() or {}
